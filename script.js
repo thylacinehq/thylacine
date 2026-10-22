@@ -96,7 +96,7 @@
     deep: tok('--bg-deep'), sky: tok('--sky'), body: tok('--body'),
     stripeHi: tok('--stripe-hi'), fur: tok('--fur'), furHi: tok('--fur-hi'), band: tok('--band'),
     glow: tok('--glow'), rim: tok('--glow-rim'), accent: tok('--accent'), tongue: tok('--tongue'), light: tok('--fur-light'),
-    far: tok('--fur-far'), belly: tok('--belly'), mouth: tok('--mouth'), tooth: tok('--tooth'), eye: tok('--eye'),
+    shade: tok('--fur-shade'), belly: tok('--belly'), mouth: tok('--mouth'), tooth: tok('--tooth'), eye: tok('--eye'),
   };
   const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   const ok = (c, a = 1) => `oklch(${c[0].toFixed(4)} ${c[1].toFixed(4)} ${c[2].toFixed(2)} / ${a.toFixed(3)})`;
@@ -252,7 +252,7 @@
       return [gr, x, y, r];
     };
     paints = {
-      coat, belly, light: ok(C.light), far: ok(C.far), mouth: ok(C.mouth), tooth: ok(C.tooth), tongue: ok(C.tongue), eye: ok(C.eye), band: ok(C.band),
+      coat, belly, light: ok(C.light), mouth: ok(C.mouth), tooth: ok(C.tooth), tongue: ok(C.tongue), eye: ok(C.eye), band: ok(C.band), farShade: ok(C.shade, 0.5),
       // Shoulder and chest fall into shadow under the light; the haunch catches it on top.
       shades: [shade(113, -26, 14, C.band, 0.22), shade(58, -52, 15, C.furHi, 0.25)],
     };
@@ -398,9 +398,12 @@
      its own group of bars that turns about the hinge. Then the detail as small solid marks. */
   const drawFormed = (g, hit, s) => {
     const P = paints, D = hit.geo.detail, px = 1 / s, J = hit.geo.jaw;
+    // Far legs and far ear: the coat's own bars, opaque, a step darker for depth.
     g.save();
     g.clip(hit.far);
-    g.fillStyle = P.far;
+    g.fillStyle = P.coat;
+    g.fill(barPaths.all);
+    g.fillStyle = P.farShade;
     g.fill(barPaths.all);
     g.restore();
     // The open mouth: a dark wedge behind the bars, with the tongue on its floor.

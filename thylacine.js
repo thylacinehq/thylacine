@@ -20,9 +20,9 @@
   const BODY = [
     [43, -52], [47, -56.6], [53, -60], [60, -62.2], [68, -63.2], [77, -63], [86, -62], [95, -60.9],
     [103, -60.5], [110, -61], [117, -62], [124, -63.2], [130, -63.8],
-    [134, -58], [134.6, -51], [131.6, -45], [127.6, -39], [124.6, -33], [121.4, -27.6], [116, -23.4],
-    [110, -22.8], [103, -24.4], [96, -27.2], [89, -30], [82, -32.8], [76, -34.8], [70, -35.4], [64, -34],
-    [58, -34.2], [51, -36.4], [46, -40.4], [43, -46],
+    [134, -58], [134.6, -51], [131.6, -45], [127.6, -38.6], [124.6, -32], [121.4, -26.4], [116, -22.4],
+    [110, -21.8], [103, -23], [96, -25.2], [89, -27.4], [82, -29.4], [76, -30.6], [70, -31], [64, -30.6],
+    [58, -31.6], [51, -34.6], [46, -39.4], [43, -46],
   ];
   const BACK_N = 13; // the first 13 points are the topline
 
@@ -64,8 +64,8 @@
 
   // Legs: root joint, two bones to the wrist or hock, then the foot to the ball of the paw.
   // Front: elbow behind, straight sturdy forearm. Hind: knee forward, raised heel (hock) on a long foot.
-  const FRONT = { root: [116, -42], a: 18.5, b: 18.1, toe: 119.5, foot: [4.2, 4.6], r: [9, 5.6, 3.5, 2.7], bend: 1, paw: 1 };
-  const HIND = { root: [56, -47], a: 20.2, b: 20.7, toe: 64.5, foot: [8, 10.4], r: [12.6, 6.4, 3.3, 2.5], bend: -1, paw: 1.08, heel: true };
+  const FRONT = { root: [116, -42], a: 18.5, b: 18.1, toe: 119.5, foot: [4.2, 4.6], r: [10.5, 7.4, 4.7, 3.6], bend: 1, paw: 1.3 };
+  const HIND = { root: [56, -47], a: 20.2, b: 20.7, toe: 64.5, foot: [8, 10.4], r: [14.5, 8.4, 4.5, 3.4], bend: -1, paw: 1.32, heel: true };
   // Tail: thick at the root, tapering; hangs at about 45 degrees standing, lifts toward level when running.
   const TAIL = {
     base: [46, -51],
@@ -73,7 +73,7 @@
     r: [5.8, 5.3, 4.7, 4, 3.2, 2.3, 1.3],
   };
   // A broad paw: heel pad and four toes as discs, claws at the toe fronts. Paw frame: x forward, y down.
-  const TOES = [[4.6, -1.3, 1.3], [3.1, -1.25, 1.3], [1.6, -1.3, 1.35]];
+  const TOES = [[4.9, -1.2, 1.15], [3.6, -1.25, 1.2], [2.3, -1.3, 1.25], [1, -1.35, 1.25]];
   const PAD = [-0.4, -2.1, 2.1];
   const INSTEP = [2, -2.4, 2];
 
@@ -241,8 +241,8 @@
       const knee = ik(r0, ankle, d.a, d.b, d.bend);
       const out = leg.far ? L.far : L.near;
       capsules([r0, knee, ankle, [tx, ty]], d.r.map((r) => r * k), out);
-      if (d.heel) out.push(disc([ankle[0] - 1.8, ankle[1] + 0.6], 2.7 * k, 10));
-      if (!front) out.push(disc([knee[0] + 1, knee[1] + 1], 6 * k, 14));
+      if (d.heel) out.push(disc([ankle[0] - 1.8, ankle[1] + 0.6], 3.6 * k, 10));
+      if (!front) out.push(disc([knee[0] + 1, knee[1] + 1], 7.6 * k, 14));
       // The paw.
       const curl = sw * 0.9, ps = d.paw * k;
       const pf = (p) => rot([tx + p[0] * ps, ty + p[1] * ps], [tx, ty], curl);
@@ -331,8 +331,10 @@
     for (let i = 0; i < nL; i++) push(BOX.x0 + ((i + 0.5) * lenL) / nL, (lenL / nL) * 0.66, 0, 0);
     for (let i = BANDS.n - 1; i >= 0; i--) {
       const x = BANDS.from - i * per;
-      push(x, per * 0.5, i === BANDS.amber ? 3 : 1, BAND_LEN[i]);
-      push(x + per / 2, per * 0.3, 2, 0);
+      // Broad dark-topped bar, narrow light bar, and a gap of 0.16 of the band after each: the same bar to
+      // gap ratio as the plain bars (about 2 to 1), so the legs under the bands stay clearly barred.
+      push(x, per * 0.44, i === BANDS.amber ? 3 : 1, BAND_LEN[i]);
+      push(x + per / 2, per * 0.24, 2, 0);
     }
     // In front of the bands the pitch holds through the shoulder, then narrows over the neck to HEAD_PITCH of
     // itself across the head, so the muzzle and ears keep enough bars to read. Same bar to gap ratio throughout.

@@ -45,8 +45,8 @@
   --fur: oklch(0.58 0.06 68);
   --fur-hi: oklch(0.74 0.07 74);
   --band: oklch(0.22 0.02 55);
-  --fur-far: oklch(0.5 0.05 64);
   --fur-light: oklch(0.80 0.06 78);
+  --fur-shade: oklch(0.40 0.08 55);
   --belly: oklch(0.84 0.05 82);
   --mouth: oklch(0.24 0.06 28);
   --tongue: oklch(0.46 0.09 22);
@@ -174,7 +174,7 @@ h1 {
   margin: 1rem 0 clamp(6rem, 12vw, 8rem) auto;
   pointer-events: none;
 }
-.t-far { fill: var(--fur-far); }
+.t-shade { fill: var(--fur-shade); }
 .t-light { fill: var(--fur-light); }
 .t-band { fill: var(--band); }
 .t-mouth { fill: var(--mouth); }
@@ -297,7 +297,9 @@ footer {
   position: absolute;
   inset: auto 0 0;
   z-index: 2;
-  height: clamp(7rem, 22vh, 12rem);
+  /* Starts at the ground line the script draws (H minus clamp(15vh, 96px, 150px)), so it darkens the rail
+     and CTA without dimming the animal's legs. */
+  height: clamp(96px, 15vh, 150px);
   background: linear-gradient(to top, var(--bg-deep) 35%, var(--bg-deep-clear));
   pointer-events: none;
 }
