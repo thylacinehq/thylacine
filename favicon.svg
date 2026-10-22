@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<rect width="32" height="32" rx="6" fill="oklch(0.15 0.012 65)"/>
+<rect x="6" y="0" width="3" height="18" fill="oklch(0.30 0.015 65)"/>
+<rect x="11" y="0" width="2" height="26" fill="oklch(0.30 0.015 65)"/>
+<rect x="15" y="0" width="3" height="14" fill="oklch(0.78 0.14 72)"/>
+<rect x="20" y="0" width="2" height="22" fill="oklch(0.30 0.015 65)"/>
+<rect x="24" y="0" width="3" height="16" fill="oklch(0.30 0.015 65)"/>
+</svg>

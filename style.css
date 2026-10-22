@@ -1,0 +1,192 @@
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("fonts/instrument-sans-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("fonts/instrument-sans-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  --bg: oklch(0.15 0.012 65);
+  --stripe: oklch(0.24 0.018 65);
+  --rule: oklch(0.30 0.015 65);
+  --text: oklch(0.92 0.02 78);
+  --text-dim: oklch(0.72 0.025 70);
+  --accent: oklch(0.78 0.14 72);
+
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+  --space-section: clamp(4rem, 10vw, 9rem);
+
+  --step-0: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --step-1: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-2: clamp(1.75rem, 1.4rem + 1.6vw, 2.75rem);
+  --step-hero: clamp(3.75rem, 1.5rem + 17vw, 17rem);
+
+  --stripe-unit: clamp(0.2rem, 0.12rem + 0.35vw, 0.5rem);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, p, ul { margin: 0; padding: 0; }
+ul { list-style: none; }
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Hero */
+
+.stripes {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: clamp(11rem, 42vh, 26rem);
+  display: flex;
+  justify-content: space-between;
+  padding-inline: var(--gutter);
+  pointer-events: none;
+}
+.stripes i {
+  display: block;
+  width: calc(var(--w) * var(--stripe-unit));
+  height: var(--h);
+  background: var(--stripe);
+  transform-origin: top;
+  animation: hang 600ms ease-out both;
+  animation-delay: calc(var(--i) * 40ms);
+}
+.stripes i.alive { background: var(--accent); }
+
+@keyframes hang {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+.hero {
+  position: relative;
+  min-height: max(100svh, 34rem);
+  padding: 0 var(--gutter) clamp(2.5rem, 7vw, 5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: var(--step-hero);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  margin-left: -0.04em;
+}
+.line {
+  margin-top: clamp(1rem, 2.5vw, 2rem);
+  max-width: 24ch;
+  font-size: var(--step-1);
+  line-height: 1.3;
+  color: var(--text-dim);
+}
+.go {
+  align-self: flex-start;
+  margin-top: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 500;
+}
+.go::after { content: " \2192"; }
+
+/* Sections */
+
+main { padding-inline: var(--gutter); }
+
+section {
+  display: grid;
+  gap: 1.5rem;
+  padding-block: var(--space-section);
+  border-top: 1px solid var(--rule);
+}
+h2 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: var(--step-2);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+h3 {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: var(--step-1);
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.row {
+  display: grid;
+  gap: 0.75rem;
+  padding-block: clamp(1.5rem, 3vw, 2.25rem);
+  border-top: 1px solid var(--rule);
+}
+.row:first-child { border-top: 0; padding-top: 0; }
+.row:last-child { padding-bottom: 0; }
+
+.row li, .plain li, .empty {
+  font-size: var(--step-1);
+  line-height: 1.4;
+}
+.row li { color: var(--text-dim); }
+.empty { color: var(--text-dim); }
+.plain { display: grid; gap: 0.5rem; }
+.plain a { overflow-wrap: anywhere; }
+
+footer {
+  padding: 0 var(--gutter) 2.5rem;
+  border-top: 0;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+}
+
+@media (min-width: 48rem) {
+  section {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 2rem;
+  }
+  section h2 { grid-column: 1 / 5; }
+  section .body { grid-column: 5 / 13; max-width: 44rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stripes i { animation: none; }
+}
