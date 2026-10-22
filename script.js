@@ -3,7 +3,7 @@
   const stage = document.querySelector('.stage');
   const main = document.querySelector('main');
   if (!stage || !main || reduce.matches) return;
-  if (!document.createElement('canvas').getContext) return;
+  if (!document.createElement('canvas').getContext || !window.Thylacine) return;
 
   /* ---------- Frames: one screen per idea ---------- */
 
@@ -55,14 +55,11 @@
   film.append(stage);
   stage.append(main);
 
-  // Three planes of the same back: far, main, near. Each is its own canvas so focus can be pulled with CSS blur.
-  const planes = ['far', 'main', 'near'].map((name) => {
-    const c = document.createElement('canvas');
-    c.className = `world world-${name}`;
-    c.setAttribute('aria-hidden', 'true');
-    return { c, g: c.getContext('2d') };
-  });
-  stage.prepend(...planes.map((p) => p.c));
+  const canvas = document.createElement('canvas');
+  canvas.className = 'world';
+  canvas.setAttribute('aria-hidden', 'true');
+  const ctx = canvas.getContext('2d');
+  stage.prepend(canvas);
   const scrim = document.createElement('div');
   scrim.className = 'scrim';
   scrim.setAttribute('aria-hidden', 'true');
@@ -97,8 +94,8 @@
   };
   const C = {
     deep: tok('--bg-deep'), sky: tok('--sky'), body: tok('--body'),
-    stripe: tok('--stripe'), lit: tok('--stripe-lit'), glow: tok('--glow'),
-    rim: tok('--glow-rim'), accent: tok('--accent'),
+    stripeHi: tok('--stripe-hi'), fur: tok('--fur'), furHi: tok('--fur-hi'), band: tok('--band'),
+    glow: tok('--glow'), rim: tok('--glow-rim'), accent: tok('--accent'),
   };
   const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   const ok = (c, a = 1) => `oklch(${c[0].toFixed(4)} ${c[1].toFixed(4)} ${c[2].toFixed(2)} / ${a.toFixed(3)})`;
@@ -106,43 +103,39 @@
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const smooth = (t) => t * t * (3 - 2 * t);
   const lerp = (a, b, t) => a + (b - a) * t;
-  // Small fixed jitter per stripe, so the pattern looks grown, not printed.
-  const jit = (i, k) => {
-    const s = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
-    return s - Math.floor(s);
-  };
 
-  /* ---------- The back ----------
-     A curved spine with even, tapering stripes hanging from it. The survivor is stripe 0.
-     Keyframes, one per frame. Units: x is a fraction of width; R, sp, len are fractions of U (see size()).
-     rot: which stripe sits on the crest. lit, litW: where along the back the light falls, and how wide.
-     dim: light on the unlit stripes. glow: overall light. focus: 0 far, 1 main, 2 near.
-     drop: extra room between the text and the crest, as a fraction of height. */
+  /* ---------- The stripes and the animal ----------
+     Frame 1 is a row of plain, even, vertical stripes. Scrolling on, each stripe moves to its own column of
+     the animal and takes the spans the silhouette covers there, so the stripes become the animal. Then it runs.
+     The silhouette comes from thylacine.js: a parametric skeleton, sampled column by column. */
+
+  const T = window.Thylacine;
+  const SPAN = T.BOX.x1 - T.BOX.x0;
+  const TOP = 75; // ear tip plus bob, in model units
+
+  // Per frame: where the animal stands (fraction of width), how bright the light is, how fast it runs.
   const keysWide = [
-    { x: 0.6, R: 1.05, sp: 0.03, len: 0.24, rot: -10, lit: 0, litW: 5, dim: 0.32, glow: 0.7, focus: 1, drop: 0.07, fade: 1 },
-    { x: 0.66, R: 0.8, sp: 0.042, len: 0.3, rot: -7, lit: -6, litW: 4, dim: 0.22, glow: 0.55, focus: 2, drop: 0.07, fade: 1 },
-    { x: 0.56, R: 2.2, sp: 0.022, len: 0.2, rot: -4.5, lit: 7, litW: 6, dim: 0.22, glow: 0.6, focus: 0, drop: 0.08, fade: 1 },
-    { x: 0.62, R: 1.2, sp: 0.032, len: 0.26, rot: -2.5, lit: 0, litW: 0.2, dim: 0.03, glow: 0.3, focus: 1, drop: 0.1, fade: 0.14 },
-    { x: 0.7, R: 0.62, sp: 0.07, len: 0.42, rot: 0, lit: 0, litW: 7, dim: 0.28, glow: 1, focus: 1, drop: 0.07, fade: 1 },
+    { x: 0.62, light: 0.7, run: 0 },
+    { x: 0.64, light: 0.6, run: 0 },
+    { x: 0.62, light: 0.66, run: 1 },
+    { x: 0.6, light: 0.38, run: 1 },
+    { x: 0.66, light: 1, run: 0 },
   ];
-  const keysTall = [
-    { x: 0.58, R: 1.7, sp: 0.06, len: 0.42, rot: -4, lit: 0, litW: 3, dim: 0.32, glow: 0.7, focus: 1, drop: 0.06, fade: 1 },
-    { x: 0.7, R: 1.3, sp: 0.08, len: 0.5, rot: -3, lit: -3, litW: 2.5, dim: 0.22, glow: 0.55, focus: 2, drop: 0.06, fade: 1 },
-    { x: 0.5, R: 3.2, sp: 0.045, len: 0.36, rot: -2, lit: 3, litW: 3, dim: 0.22, glow: 0.6, focus: 0, drop: 0.07, fade: 1 },
-    { x: 0.55, R: 1.9, sp: 0.06, len: 0.45, rot: -1.2, lit: 0, litW: 0.2, dim: 0.03, glow: 0.3, focus: 1, drop: 0.1, fade: 0.14 },
-    { x: 0.62, R: 1.1, sp: 0.12, len: 0.7, rot: 0, lit: 0, litW: 4, dim: 0.28, glow: 1, focus: 1, drop: 0.06, fade: 1 },
-  ];
+  const keysTall = keysWide.map((k) => ({ ...k, x: 0.5 }));
 
-  let W = 0, H = 0, U = 0, dpr = 1, keys = keysWide, boxes = [];
+  let W = 0, H = 0, dpr = 1, keys = keysWide, boxes = [], N = 80, xs = [], amberK = 0;
+  let ground = 0, scales = [];
+  let E = new Float32Array(0), X = E, TOPS = E, BOTS = E, CN = new Uint8Array(0);
+  const cache = new Map();
 
   const size = () => {
     const r = stage.getBoundingClientRect();
     W = r.width; H = r.height;
-    U = Math.min(W, H * 1.5);
     dpr = Math.min(devicePixelRatio || 1, 2);
-    planes.forEach(({ c }) => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); });
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
     keys = W / H < 0.9 ? keysTall : keysWide;
-    // The crest sits under each frame's text. Boxes come from the words themselves, so ragged lines count.
+    // Text boxes come from the words themselves, so ragged lines count.
     boxes = frames.map((f) => {
       let bottom = 0;
       f.parts.forEach((p) => {
@@ -161,147 +154,180 @@
       });
       return bottom;
     });
+    // Feet stand on a line above the rail and CTA. The animal fits between that line and the text.
+    ground = H - clamp(H * 0.15, 96, 150);
+    const maxW = W / H < 0.9 ? W * 0.94 : Math.min(W * 0.58, 820);
+    scales = boxes.map((b) => Math.max(0.5, Math.min(maxW / SPAN, (ground - b - H * 0.05) / TOP)));
+    const n = clamp(Math.round(maxW / 5), 72, 112);
+    if (n !== N || !xs.length) {
+      N = n;
+      xs = [];
+      for (let k = 0; k < N; k++) xs.push(T.BOX.x0 + ((k + 0.5) * SPAN) / N);
+      // The amber stripe in the opening row is a column of the amber band on the rump.
+      const lit = [];
+      for (let k = 0; k < N; k++) if (T.bandAt(xs[k]).amber) lit.push(k);
+      amberK = lit[Math.floor(lit.length / 2)] || 0;
+      E = new Float32Array(N); X = new Float32Array(N); CN = new Uint8Array(N);
+      TOPS = new Float32Array(N * T.MAX); BOTS = new Float32Array(N * T.MAX);
+      cache.clear();
+    }
   };
 
-  const camAt = (p) => {
+  // Spans for a pose, cached on a grid of phase and stride so no frame rebuilds geometry it has seen.
+  const PH = 40, AM = 6;
+  const spansFor = (phase, amp) => {
+    const pi = ((Math.round(phase * PH) % PH) + PH) % PH;
+    const ai = Math.round(clamp(amp, 0, 1) * (AM - 1));
+    const key = ai * PH + (ai ? pi : 0);
+    let hit = cache.get(key);
+    if (!hit) {
+      hit = { out: new Float32Array(N * T.MAX * 2), counts: new Uint8Array(N) };
+      T.spans(T.pose(ai ? pi / PH : 0, ai / (AM - 1)), xs, hit.out, hit.counts);
+      cache.set(key, hit);
+    }
+    return hit;
+  };
+
+  // Colours, mixed once per frame from the tokens.
+  const col = { amber: ok(C.accent) };
+
+  // Sky and light are redrawn only when they change.
+  const sky = document.createElement('canvas');
+  const sg = sky.getContext('2d');
+  let skyKey = '';
+  const paintSky = (light, gx) => {
+    const key = `${W}|${H}|${Math.round(ground)}|${light.toFixed(2)}|${Math.round(gx / 8)}`;
+    if (key === skyKey) return;
+    skyKey = key;
+    sky.width = canvas.width; sky.height = canvas.height;
+    sg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const g = sg.createLinearGradient(0, 0, 0, ground);
+    g.addColorStop(0, ok(C.deep));
+    g.addColorStop(0.55, ok(C.deep));
+    g.addColorStop(1, ok(mix(C.deep, C.sky, 0.2 + 0.55 * light)));
+    sg.fillStyle = g;
+    sg.fillRect(0, 0, W, ground);
+    const gr = sg.createLinearGradient(0, ground, 0, H);
+    gr.addColorStop(0, ok(mix(C.body, C.sky, 0.25 * light)));
+    gr.addColorStop(0.5, ok(C.deep));
+    sg.fillStyle = gr;
+    sg.fillRect(0, ground, W, H - ground);
+    sg.save();
+    sg.translate(gx, ground);
+    sg.scale(1, 0.3);
+    const rad = Math.max(W, H) * 0.6;
+    const gl = sg.createRadialGradient(0, 0, 0, 0, 0, rad);
+    gl.addColorStop(0, ok(C.glow, 0.5 * light));
+    gl.addColorStop(0.45, ok(C.glow, 0.1 * light));
+    gl.addColorStop(1, ok(C.glow, 0));
+    sg.fillStyle = gl;
+    sg.fillRect(-rad, -rad, rad * 2, rad * 2);
+    sg.restore();
+    const rim = sg.createLinearGradient(0, 0, W, 0);
+    rim.addColorStop(0, ok(C.rim, 0));
+    rim.addColorStop(clamp(gx / W, 0.1, 0.9), ok(C.rim, 0.8 * light));
+    rim.addColorStop(1, ok(C.rim, 0));
+    sg.fillStyle = rim;
+    sg.fillRect(0, ground, W, 1);
+  };
+
+  let phase = 0, travel = 0, runNow = 0;
+
+  const frameAt = (p) => {
     const a = Math.min(Math.floor(p), last - 1);
     const t = smooth(clamp(p - a, 0, 1));
-    const A = keys[a], B = keys[a + 1];
-    const c = {};
-    for (const k in A) c[k] = lerp(A[k], B[k], t);
-    // Crest height: below whichever text is on screen. Uses the larger of the two during a cut.
-    const crestOf = (i) => clamp(boxes[i] + keys[i].drop * H, 0.5 * H, 0.82 * H);
-    c.y = lerp(crestOf(a), crestOf(a + 1), t);
-    return c;
-  };
-
-  // Draw one back. o: crest x, y, radius, spacing, length, rotation, light, and which plane.
-  const back = (g, o) => {
-    const { x, y, R, sp, len, rot, light, dim, lit, litW, rise, survivor, alpha, fade = 1 } = o;
-    const cy = y + R;
-    const step = sp / R;
-    const reach = Math.min(Math.PI * 0.62, Math.asin(Math.min(1, (Math.max(x, W - x) + sp * 2) / R)) + step * 2);
-
-    // Body under the spine, so planes behind are hidden by it.
-    const body = g.createLinearGradient(0, y, 0, Math.min(cy, y + H));
-    body.addColorStop(0, ok(mix(C.body, C.sky, 0.25 * light), alpha));
-    body.addColorStop(0.5, ok(C.body, alpha));
-    body.addColorStop(1, ok(C.deep, alpha));
-    g.fillStyle = body;
-    g.beginPath();
-    g.arc(x, cy, R, 0, Math.PI * 2);
-    g.fill();
-
-    // Stripes: even spacing along the spine, hanging inward, tapering to a point.
-    const i0 = Math.floor(rot - reach / step), i1 = Math.ceil(rot + reach / step);
-    for (let i = i0; i <= i1; i++) {
-      const a = (i - rot) * step;
-      if (Math.abs(a) > reach) continue;
-      const sa = Math.sin(a), ca = Math.cos(a);
-      const px = x + R * sa, py = cy - R * ca;
-      if (py > H + 40) continue;
-      const tx = ca, ty = sa;        // along the spine
-      const nx = -sa, ny = ca;       // into the body
-      const grow = smooth(clamp(rise * 2.2 - Math.abs(i - rot) * 0.04, 0, 1));
-      const l = len * (0.94 + 0.12 * jit(i, 1)) * grow;
-      if (l < 1) continue;
-      const w0 = sp * (0.4 + 0.08 * jit(i, 2));
-      const sx = px + nx * w0 * 0.3, sy = py + ny * w0 * 0.3;
-      const curl = l * (0.06 + 0.04 * jit(i, 3));
-      const ex = sx + nx * l - tx * curl, ey = sy + ny * l - ty * curl;
-      const mx = (sx + ex) / 2, my = (sy + ey) / 2;
-      const isAmber = survivor && i === 0;
-      const L = isAmber ? 1 : dim + (1 - dim) * Math.exp(-(((i - rot - lit) / Math.max(litW, 0.01)) ** 2));
-      const col = isAmber ? C.accent : mix(C.stripe, C.lit, clamp(L * light, 0, 1));
-      const a0 = isAmber ? alpha : alpha * fade;
-      const grad = g.createLinearGradient(sx, sy, ex, ey);
-      grad.addColorStop(0, ok(col, a0));
-      grad.addColorStop(0.55, ok(col, a0 * (isAmber ? 1 : 0.85)));
-      grad.addColorStop(1, ok(col, isAmber ? alpha * 0.5 : 0));
-      g.fillStyle = grad;
-      g.beginPath();
-      g.moveTo(sx - tx * w0 / 2, sy - ty * w0 / 2);
-      g.quadraticCurveTo(mx - tx * w0 * 0.42, my - ty * w0 * 0.42, ex, ey);
-      g.quadraticCurveTo(mx + tx * w0 * 0.42, my + ty * w0 * 0.42, sx + tx * w0 / 2, sy + ty * w0 / 2);
-      g.closePath();
-      g.fill();
-      if (isAmber) {
-        // A soft light around the survivor, held to its own column.
-        const rr = Math.max(w0 * 2.2, 18);
-        g.save();
-        g.translate(mx, my);
-        g.rotate(Math.atan2(ey - sy, ex - sx));
-        g.scale((l * 0.62) / rr, 1);
-        const halo = g.createRadialGradient(0, 0, 0, 0, 0, rr);
-        halo.addColorStop(0, ok(C.accent, 0.22 * alpha));
-        halo.addColorStop(1, ok(C.accent, 0));
-        g.fillStyle = halo;
-        g.fillRect(-rr, -rr, rr * 2, rr * 2);
-        g.restore();
-      }
-    }
-
-    // The spine, lit from behind.
-    g.lineCap = 'round';
-    g.strokeStyle = ok(C.rim, 0.12 * light * alpha);
-    g.lineWidth = 10;
-    g.beginPath();
-    g.arc(x, cy, R, -Math.PI / 2 - reach, -Math.PI / 2 + reach);
-    g.stroke();
-    g.strokeStyle = ok(C.rim, 0.85 * light * alpha);
-    g.lineWidth = 1.25;
-    g.stroke();
+    return { a, t, A: keys[a], B: keys[a + 1] };
   };
 
   const draw = (p, rise) => {
-    const k = camAt(p);
-    const light = k.glow * rise;
-    const R = k.R * U, sp = k.sp * U, len = k.len * U;
-    const X = k.x * W;
-    const [far, mainP, near] = planes.map((pl) => {
-      pl.g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      pl.g.clearRect(0, 0, W, H);
-      return pl.g;
-    });
+    const { a, t, A, B } = frameAt(p);
+    const light = lerp(A.light, B.light, t) * rise;
+    const s = a === 0 ? scales[1] : lerp(scales[a], scales[a + 1], t);
+    const cx = lerp(A.x, B.x, t) * W;
+    const ax = cx - (SPAN * s) / 2 - T.BOX.x0 * s; // screen x of model x = 0
 
-    // Sky on the far plane: dark overhead, warm low light behind the crest.
-    const sky = far.createLinearGradient(0, 0, 0, k.y);
-    sky.addColorStop(0, ok(C.deep));
-    sky.addColorStop(0.6, ok(C.deep));
-    sky.addColorStop(1, ok(mix(C.deep, C.sky, 0.25 + 0.6 * light)));
-    far.fillStyle = sky;
-    far.fillRect(0, 0, W, H);
-    far.save();
-    far.translate(X, k.y);
-    far.scale(1, 0.32);
-    const rad = Math.max(W, H) * 0.7;
-    const gl = far.createRadialGradient(0, 0, 0, 0, 0, rad);
-    gl.addColorStop(0, ok(C.glow, 0.5 * light));
-    gl.addColorStop(0.4, ok(C.glow, 0.12 * light));
-    gl.addColorStop(1, ok(C.glow, 0));
-    far.fillStyle = gl;
-    far.fillRect(-rad, -rad, rad * 2, rad * 2);
-    far.restore();
+    const g = ctx;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    paintSky(light, cx);
+    g.drawImage(sky, 0, 0);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Far: a second back behind, flatter and finer, sliding slower.
-    back(far, {
-      x: X - W * 0.18 + k.rot * sp * 0.15, y: k.y - H * 0.035, R: R * 1.5, sp: sp * 0.62, len: len * 0.55,
-      rot: k.rot * 0.6 + 3.5, light: light * 0.55, dim: k.dim, lit: k.lit * 0.6, litW: Math.max(k.litW, 4),
-      rise, survivor: false, alpha: 0.9, fade: k.fade,
-    });
-    // Main: the back the story follows, carrying the survivor.
-    back(mainP, { x: X, y: k.y, R, sp, len, rot: k.rot, light, dim: k.dim, lit: k.lit, litW: k.litW, rise, survivor: true, alpha: 1, fade: k.fade });
-    // Near: a shoulder at the bottom edge, large and soft, moving fastest.
-    back(near, {
-      x: W * 0.08 - k.rot * sp * 0.9, y: H * 0.93, R: R * 0.7, sp: sp * 2.4, len: len * 1.6,
-      rot: k.rot * 1.6, light: light * 0.4, dim: 0.5, lit: 0, litW: 30, rise, survivor: false, alpha: 1, fade: k.fade,
-    });
+    // Ground marks: rows of short dashes, nearer rows faster, so running reads as travel.
+    for (let r = 0; r < 4; r++) {
+      const y = ground + 7 + r * 7 + r * r * 4;
+      const gap = 42 + r * 22, len = 8 + r * 6;
+      const off = (((travel * (0.6 + r * 0.45)) % gap) + gap) % gap;
+      g.fillStyle = ok(C.rim, (0.16 + r * 0.05) * light);
+      for (let x = -off; x < W; x += gap) g.fillRect(x, y, len, 1);
+    }
 
-    // Focus pull: the plane at `focus` is sharp, the others fall off with distance from it.
-    const b = (n) => Math.abs(n - k.focus);
-    planes[0].c.style.filter = `blur(${(b(0) * 3.5).toFixed(2)}px)`;
-    planes[1].c.style.filter = b(1) > 0.02 ? `blur(${(b(1) * 4).toFixed(2)}px)` : 'none';
-    planes[2].c.style.filter = `blur(${(3 + b(2) * 5).toFixed(2)}px)`;
+    // Morph: 0 is the plain row, 1 is the animal. Done by the end of the first scroll stretch.
+    const m = smooth(clamp(p / 0.85, 0, 1));
+    const sp = spansFor(phase, runNow);
+    const pitchA = (SPAN / N) * s;
+    const fieldL = W / H < 0.9 ? 16 : Math.max(16, W * 0.05);
+    const fieldR = W - fieldL;
+    const pitch0 = (fieldR - fieldL) / N;
+    const top0 = clamp(boxes[0] + H * 0.06, H * 0.42, ground - 40);
+
+    // Pass 1: where each stripe is and the spans it covers, morphed. A column with no span shrinks into the ground.
+    const MX = T.MAX;
+    for (let k = 0; k < N; k++) {
+      // Tail end leads, head follows, so the animal assembles from the back like a wave.
+      const e = smooth(clamp(m * 1.5 - (k / N) * 0.5, 0, 1));
+      const grow = smooth(clamp(rise * 2 - (k / N) * 0.8, 0, 1));
+      const t0 = lerp(ground, top0, grow);
+      const n = sp.counts[k];
+      E[k] = e;
+      X[k] = lerp(fieldL + (k + 0.5) * pitch0, ax + xs[k] * s, e);
+      CN[k] = n;
+      if (!n) { TOPS[k * MX] = lerp(t0, ground, e); BOTS[k * MX] = ground; }
+      for (let j = 0; j < n; j++) {
+        TOPS[k * MX + j] = lerp(t0, ground + sp.out[(k * MX + j) * 2] * s, e);
+        BOTS[k * MX + j] = lerp(ground, ground + sp.out[(k * MX + j) * 2 + 1] * s, e);
+      }
+    }
+    // Once formed, each span's ends meet the matching span next door, so outlines run smooth instead of stepping.
+    const jump = 6 * s;
+    const meet = (arr, k, j, d) => {
+      const o = k + d, v = arr[k * MX + j];
+      if (o < 0 || o >= N || !CN[o] || !CN[k]) return v;
+      for (let i = 0; i < CN[o]; i++) {
+        const u = arr[o * MX + i];
+        if (Math.abs(u - v) < jump && BOTS[o * MX + i] > TOPS[k * MX + j] && TOPS[o * MX + i] < BOTS[k * MX + j]) return lerp(v, (u + v) / 2, E[k]);
+      }
+      return v;
+    };
+    // Pass 2: draw.
+    for (let k = 0; k < N; k++) {
+      const e = E[k], x = X[k], amber = k === amberK;
+      const rearT = clamp((112 - xs[k]) / 26, 0, 1) * clamp((xs[k] - 16) / 10, 0, 1);
+      const w = lerp(pitch0 * 0.6, pitchA + 0.6, e);
+      const l = x - w / 2, r = x + w / 2;
+      g.fillStyle = ok(mix(amber ? C.accent : C.stripeHi, mix(C.fur, C.furHi, rearT), e));
+      for (let j = 0; j < Math.max(1, CN[k]); j++) {
+        if (BOTS[k * MX + j] - TOPS[k * MX + j] <= 0.5) continue;
+        g.beginPath();
+        g.moveTo(l, meet(TOPS, k, j, -1));
+        g.lineTo(r, meet(TOPS, k, j, 1));
+        g.lineTo(r, meet(BOTS, k, j, 1));
+        g.lineTo(l, meet(BOTS, k, j, -1));
+        g.fill();
+      }
+      const band = T.bandAt(xs[k]);
+      if (band.depth && CN[k] && e > 0.01) {
+        // Dark bands from the spine down the flank: on the body a fixed length, on the tail most of its depth.
+        const span = BOTS[k * MX] - TOPS[k * MX];
+        const depth = xs[k] < 46 ? span * band.depth : Math.min(span, 25 * s * band.depth);
+        const d = amber ? Math.max(depth, span * (1 - e)) : depth * e;
+        const tl = meet(TOPS, k, 0, -1), tr = meet(TOPS, k, 0, 1);
+        // One band is the survivor: amber instead of dark.
+        g.fillStyle = band.amber ? (amber ? col.amber : ok(C.accent, e)) : ok(C.band, e);
+        g.beginPath();
+        g.moveTo(l, tl); g.lineTo(r, tr); g.lineTo(r, tr + d); g.lineTo(l, tl + d);
+        g.fill();
+      }
+    }
   };
 
   /* ---------- Type choreography ---------- */
@@ -355,15 +381,28 @@
   const t0 = performance.now();
   const RISE_MS = 1600;
 
+  let prevT = 0;
+  const runAt = (p) => {
+    const { t, A, B } = frameAt(p);
+    return lerp(A.run, B.run, t);
+  };
   const tick = (now) => {
+    const dt = prevT ? Math.min((now - prevT) / 1000, 0.05) : 0;
+    prevT = now;
+    const before = shown;
     shown += (target - shown) * 0.09;
     if (Math.abs(target - shown) < 0.0005) shown = target;
     const r = clamp((now - t0) / RISE_MS, 0, 1);
     rise = 1 - Math.pow(1 - r, 3);
+    // The gait runs on time, so the animal keeps moving when scrolling stops; scrolling adds a push.
+    runNow = runAt(shown);
+    const push = Math.abs(shown - before) * 1.5;
+    phase = (phase + (dt * 1.5 + push) * runNow) % 1;
+    travel += (dt * 1.5 + push) * runNow * 25 * (scales[2] || 1);
     draw(shown, rise);
     paintType(shown, rise);
-    if (shown !== target || r < 1) requestAnimationFrame(tick);
-    else running = false;
+    if (shown !== target || r < 1 || runNow > 0.01) requestAnimationFrame(tick);
+    else { running = false; prevT = 0; }
   };
   const kick = () => {
     if (!running) { running = true; requestAnimationFrame(tick); }
