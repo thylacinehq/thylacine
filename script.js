@@ -77,7 +77,7 @@
   const fills = frames.map((f, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.innerHTML = `<span class="lab">${f.label}</span><span class="bar"><span class="fill"></span></span>`;
+    b.innerHTML = `<span class="lab" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="bar"><span class="fill"></span></span>`;
     b.setAttribute('aria-label', f.label);
     b.addEventListener('click', () => go(i));
     rail.append(b);
