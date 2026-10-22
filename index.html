@@ -8,32 +8,56 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#1c1a17">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preload" href="fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/instrument-sans-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="stripes" aria-hidden="true">
-  <i style="--h: 62%; --w: 5; --i: 0"></i>
-  <i style="--h: 88%; --w: 3; --i: 1"></i>
-  <i style="--h: 47%; --w: 7; --i: 2"></i>
-  <i style="--h: 100%; --w: 4; --i: 3"></i>
-  <i style="--h: 71%; --w: 2; --i: 4"></i>
-  <i style="--h: 54%; --w: 6; --i: 5"></i>
-  <i style="--h: 93%; --w: 3; --i: 6"></i>
-  <i style="--h: 68%; --w: 5; --i: 7"></i>
-  <i style="--h: 81%; --w: 2; --i: 8" class="alive"></i>
-  <i style="--h: 44%; --w: 6; --i: 9"></i>
-  <i style="--h: 76%; --w: 4; --i: 10"></i>
-  <i style="--h: 57%; --w: 3; --i: 11"></i>
-  <i style="--h: 38%; --w: 5; --i: 12"></i>
-</div>
+<div class="hero">
+  <header class="top">
+    <a class="brand" href="#" aria-label="Thylacine, top of page">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="3" y="4" width="4" height="22" class="m-dim"/>
+        <rect x="10" y="4" width="3" height="28" class="m-dim"/>
+        <rect x="16" y="4" width="4" height="16" class="m-lit"/>
+        <rect x="23" y="4" width="3" height="24" class="m-dim"/>
+        <rect x="29" y="4" width="3" height="14" class="m-dim"/>
+      </svg>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#build">What we build</a>
+      <a href="#projects">Projects</a>
+    </nav>
+    <a class="btn" href="#contact">Contact</a>
+  </header>
 
-<header class="hero">
-  <h1>Thylacine</h1>
-  <p class="line">Software products and bespoke digital solutions.</p>
-  <a class="go" href="https://github.com/thylacinehq">GitHub</a>
-</header>
+  <div class="copy">
+    <p class="eyebrow">Thylacine</p>
+    <h1>Software products and bespoke digital solutions.</h1>
+  </div>
+
+  <div class="field" aria-hidden="true">
+    <i style="--h: 34%; --w: 5; --i: 0"></i>
+    <i style="--h: 52%; --w: 3; --i: 1"></i>
+    <i style="--h: 41%; --w: 6; --i: 2"></i>
+    <i style="--h: 68%; --w: 4; --i: 3"></i>
+    <i style="--h: 57%; --w: 2; --i: 4"></i>
+    <i style="--h: 82%; --w: 5; --i: 5"></i>
+    <i style="--h: 100%; --w: 3; --i: 6" class="alive"></i>
+    <i style="--h: 76%; --w: 6; --i: 7"></i>
+    <i style="--h: 63%; --w: 2; --i: 8"></i>
+    <i style="--h: 71%; --w: 4; --i: 9"></i>
+    <i style="--h: 48%; --w: 5; --i: 10"></i>
+    <i style="--h: 39%; --w: 3; --i: 11"></i>
+    <i style="--h: 27%; --w: 5; --i: 12"></i>
+  </div>
+  <div class="horizon" aria-hidden="true"></div>
+
+  <a class="cta" href="https://github.com/thylacinehq">
+    <span>GitHub</span>
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+  </a>
+</div>
 
 <main>
   <section aria-labelledby="build">

@@ -4,46 +4,50 @@ Single static page. HTML and CSS, no JavaScript, no build step. Dark by default.
 
 ## Idea
 
-Quiet. The name, one mark, plain copy. The mark is the striped back: a field of vertical bars of irregular length, hanging from the top edge of the page. No animal drawing anywhere.
+A company page that looks like one: header with mark, nav and a boxed Contact button, a huge bold headline, one dominant visual, a clear call to action. Layout structure taken from a reference the user pointed at (EnduroSat's space service page). Nothing else is borrowed.
+
+The mark is the striped back: vertical bars of irregular height. No animal drawing anywhere.
 
 ## The one risk
 
-The stripe field is large, not small. It runs the full width of the hero at about a third of the viewport height, cropped by the top edge, and it is the only graphic on the page. Every bar is a dark umber, close to the background. One bar is amber.
+The stripes are the hero visual, not a logo. Thirteen skewed bars rise from behind a glowing horizon arc on the right of the hero, all in dark umber, close to the background. One bar is amber, taller than the rest, and lit.
 
-Why it fits: the amber bar is the one that is still there. Nothing explains it. It is a structural fact of the page, and the favicon is the same bar set in miniature. A big abstract field reads as a pattern from a distance and as a mark up close, so it needs no illustration to carry the theme.
+Why it fits: the amber bar is the one that is still standing. Nothing explains it. The header mark and the favicon are the same five bars in miniature, so the big image and the small mark are one idea at two scales. A warm horizon glow in place of a cold blue one keeps it off the default space-tech palette.
 
 ## Tokens
 
-All colour is OKLCH, defined once as custom properties. Warm neutrals (hue 60 to 75), one accent.
+All colour is OKLCH, defined once as custom properties. Warm neutrals (hue 65 to 78), one accent.
 
 | Token | Value | Use |
 |---|---|---|
-| `--bg` | `oklch(0.15 0.012 65)` | page |
-| `--surface` | `oklch(0.19 0.014 65)` | bar fill, quiet panels |
-| `--rule` | `oklch(0.30 0.015 65)` | hairlines |
-| `--text` | `oklch(0.92 0.02 78)` | body and headings |
-| `--text-dim` | `oklch(0.72 0.025 70)` | secondary text |
-| `--accent` | `oklch(0.78 0.14 72)` | links, the one bar |
+| `--bg` | `oklch(0.15 0.012 65)` | page below the hero |
+| `--bg-deep` | `oklch(0.10 0.01 65)` | hero, horizon |
+| `--stripe`, `--stripe-hi` | `oklch(0.27 0.02 65)`, `oklch(0.36 0.03 65)` | bars, mark |
+| `--rule` | `oklch(0.30 0.015 65)` | hairlines, button border |
+| `--text` | `oklch(0.95 0.02 78)` | headings, body |
+| `--text-dim` | `oklch(0.80 0.025 70)` | lists, nav |
+| `--accent` | `oklch(0.78 0.14 72)` | eyebrow, links, the lit bar, CTA |
+| `--glow`, `--glow-rim`, `--glow-bar` | accent hue at 0.35 to 0.55 alpha | horizon and lit-bar light |
 
-60/30/10: near-flat warm black, low-chroma text, one amber. Contrast is measured, not judged by eye. Results are in the commit message.
+Measured contrast (WCAG): text 17.00:1 on `--bg`, 17.78:1 on `--bg-deep`. Dim text 10.51:1 and 10.99:1. Accent 9.62:1 and 10.06:1. CTA arrow, `--bg-deep` on accent, 10.06:1.
 
 ## Type
 
-Instrument Serif for the name and section headings. Instrument Sans for everything else. Both self-hosted as woff2 in `fonts/`, so the page makes no third-party requests.
+Instrument Sans 700, uppercase, tight tracking for the headline and group headings. Instrument Serif for section headings. Instrument Sans 400 and 500 for body and nav. All self-hosted as woff2 in `fonts/`, so the page makes no third-party requests.
 
-Fluid sizes with `clamp()`. Display size has line-height 0.95 and tracking -0.02em. Body measure is capped at 60ch.
+Fluid sizes with `clamp()`. Headline line-height 0.98, tracking -0.03em, capped at 13ch.
 
 ## Layout
 
-Editorial split. A narrow left column holds the section label, a wide right column holds the content, separated by hairline rules. Under 48rem it collapses to one column. No card grid. The two groups under "What we build" are two rows separated by a rule.
+Hero fills the first screen: header row, copy block, field and horizon, CTA bottom right. Below it, an editorial split: narrow left column for the section label, wide right column for content, separated by hairlines. Under 48rem it is one column and the nav links collapse, leaving mark and Contact. No card grid.
 
 ## Motion
 
-Bars draw down from the top once on load, 600ms, ease-out, staggered 40ms. Nothing bounces. `prefers-reduced-motion: reduce` removes it entirely.
+Bars rise once on load, 700ms, ease-out, staggered 45ms. Nothing bounces. `prefers-reduced-motion: reduce` removes it and the smooth scroll.
 
 ## Accessibility
 
-Visible focus ring on every link (2px accent outline, 4px offset). Decorative SVG is `aria-hidden`. One `h1`, then `h2` per section. Links are underlined.
+Visible focus ring on every link (2px accent outline, 4px offset). Decorative SVG and the bar field are `aria-hidden`. One `h1`, then `h2` per section. Body links are underlined.
 
 ## Checks
 
