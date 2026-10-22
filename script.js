@@ -95,7 +95,8 @@
   const C = {
     deep: tok('--bg-deep'), sky: tok('--sky'), body: tok('--body'),
     stripeHi: tok('--stripe-hi'), fur: tok('--fur'), furHi: tok('--fur-hi'), band: tok('--band'),
-    glow: tok('--glow'), rim: tok('--glow-rim'), accent: tok('--accent'),
+    glow: tok('--glow'), rim: tok('--glow-rim'), accent: tok('--accent'), tongue: tok('--tongue'), light: tok('--fur-light'),
+    far: tok('--fur-far'), belly: tok('--belly'), mouth: tok('--mouth'), tooth: tok('--tooth'), eye: tok('--eye'),
   };
   const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   const ok = (c, a = 1) => `oklch(${c[0].toFixed(4)} ${c[1].toFixed(4)} ${c[2].toFixed(2)} / ${a.toFixed(3)})`;
@@ -105,13 +106,15 @@
   const lerp = (a, b, t) => a + (b - a) * t;
 
   /* ---------- The stripes and the animal ----------
-     Frame 1 is a row of plain, even, vertical stripes. Scrolling on, each stripe moves to its own column of
-     the animal and takes the spans the silhouette covers there, so the stripes become the animal. Then it runs.
-     The silhouette comes from thylacine.js: a parametric skeleton, sampled column by column. */
+     Frame 1 is a row of plain, even, vertical stripes, one amber. Scrolling on, each stripe moves to its own
+     column of the animal and takes the spans the silhouette covers there, so the stripes become the animal's
+     bars. Then it walks. The silhouette comes from thylacine.js: a parametric skeleton, sampled column by column.
+     The body stays built of bars with gaps between them; the smooth outline clips their ends so no edge steps.
+     The head and jaws are bars on the same grid, finer over the head; the lower jaw turns about one hinge. */
 
   const T = window.Thylacine;
   const SPAN = T.BOX.x1 - T.BOX.x0;
-  const TOP = 75; // ear tip plus bob, in model units
+  const TOP = 80; // ear tip plus bob and the raised head of the gape, in model units
 
   // Per frame: where the animal stands (fraction of width), how bright the light is, how fast it runs.
   const keysWide = [
@@ -123,8 +126,8 @@
   ];
   const keysTall = keysWide.map((k) => ({ ...k, x: 0.5 }));
 
-  let W = 0, H = 0, dpr = 1, keys = keysWide, boxes = [], N = 80, xs = [], amberK = 0;
-  let ground = 0, scales = [];
+  let W = 0, H = 0, dpr = 1, keys = keysWide, boxes = [], N = 80, nBase = 0, xs = [], ws = [], kinds = [], amberK = 0, barPaths = null;
+  let ground = 0, scales = [], barDepth = [];
   let E = new Float32Array(0), X = E, TOPS = E, BOTS = E, CN = new Uint8Array(0);
   const cache = new Map();
 
@@ -159,33 +162,100 @@
     const maxW = W / H < 0.9 ? W * 0.94 : Math.min(W * 0.58, 820);
     scales = boxes.map((b) => Math.max(0.5, Math.min(maxW / SPAN, (ground - b - H * 0.05) / TOP)));
     const n = clamp(Math.round(maxW / 5), 72, 112);
-    if (n !== N || !xs.length) {
-      N = n;
-      xs = [];
-      for (let k = 0; k < N; k++) xs.push(T.BOX.x0 + ((k + 0.5) * SPAN) / N);
-      // The amber stripe in the opening row is a column of the amber band on the rump.
-      const lit = [];
-      for (let k = 0; k < N; k++) if (T.bandAt(xs[k]).amber) lit.push(k);
-      amberK = lit[Math.floor(lit.length / 2)] || 0;
+    if (n !== nBase || !xs.length) {
+      nBase = n;
+      // The animal's bars: even in front and behind, a broad and a narrow bar per band over the back, finer
+      // over the head.
+      const lay = T.layout(n);
+      N = lay.xs.length;
+      xs = lay.xs; ws = lay.ws; kinds = lay.kind;
+      // The amber stripe in the opening row becomes the amber bar on the rump.
+      amberK = kinds.indexOf(3);
+      // Full-height bars in model space, one path per kind, for painting the formed animal.
+      barPaths = [0, 1, 2, 3].map((kd) => {
+        const path = new Path2D();
+        xs.forEach((x, k) => { if (kinds[k] === kd) path.rect(x - ws[k] / 2, T.BOX.top - 4, ws[k], -T.BOX.top + 4); });
+        return path;
+      });
+      barPaths.all = new Path2D();
+      barPaths.forEach((path) => barPaths.all.addPath(path));
+      barPaths.coat = new Path2D();
+      barPaths.coat.addPath(barPaths[0]);
+      barPaths.coat.addPath(barPaths[1]);
+      barDepth = lay.depth;
       E = new Float32Array(N); X = new Float32Array(N); CN = new Uint8Array(N);
       TOPS = new Float32Array(N * T.MAX); BOTS = new Float32Array(N * T.MAX);
       cache.clear();
     }
+    gaitTable();
   };
 
-  // Spans for a pose, cached on a grid of phase and stride so no frame rebuilds geometry it has seen.
-  const PH = 40, AM = 6;
-  const spansFor = (phase, amp) => {
+  // A pose, cached on a grid of phase, stride and gape so no frame rebuilds geometry it has seen:
+  // the spans each column covers, the outline as one path for the clip, and the painted layers.
+  const PH = 48, AM = 6, GP = 24;
+  const toPath = (polys) => {
+    const path = new Path2D();
+    for (const poly of polys) {
+      path.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) path.lineTo(poly[i][0], poly[i][1]);
+      path.closePath();
+    }
+    return path;
+  };
+  const spansFor = (phase, amp, gape) => {
     const pi = ((Math.round(phase * PH) % PH) + PH) % PH;
     const ai = Math.round(clamp(amp, 0, 1) * (AM - 1));
-    const key = ai * PH + (ai ? pi : 0);
+    const gi = ai ? 0 : Math.round(clamp(gape, 0, 1) * GP);
+    const key = (ai * PH + (ai ? pi : 0)) * (GP + 1) + gi;
     let hit = cache.get(key);
     if (!hit) {
-      hit = { out: new Float32Array(N * T.MAX * 2), counts: new Uint8Array(N) };
-      T.spans(T.pose(ai ? pi / PH : 0, ai / (AM - 1)), xs, hit.out, hit.counts);
+      const geo = T.pose(ai ? pi / PH : 0, ai / (AM - 1), gi / GP);
+      hit = { key, out: new Float32Array(N * T.MAX * 2), counts: new Uint8Array(N), geo };
+      T.spans(geo.polys, xs, hit.out, hit.counts);
+      hit.path = toPath(geo.polys);
+      hit.body = toPath([geo.body]);
+      hit.far = toPath(geo.far);
+      hit.coat = toPath(geo.coat);
+      hit.jaw = toPath([geo.jaw.rest]);
+      if (geo.mouth) hit.mouth = toPath([geo.mouth]);
+      // The dark part of each band bar: from the back down its band's length.
+      hit.dark = new Path2D();
+      for (let k = 0; k < N; k++) {
+        if (kinds[k] !== 1 || !hit.counts[k]) continue;
+        const top = hit.out[k * T.MAX * 2];
+        hit.dark.rect(xs[k] - ws[k] / 2, top - 1, ws[k], barDepth[k] + 1);
+      }
+      const D = geo.detail;
+      hit.ear = toPath(D.innerEars);
+      hit.nose = toPath([D.nose]);
+      hit.teeth = toPath(D.teeth);
+      hit.claws = toPath(D.claws.map((c) => c.pts));
+      if (D.tongue) hit.tongue = toPath([D.tongue]);
       cache.set(key, hit);
     }
     return hit;
+  };
+
+  // Paints that live in model space, so they follow the animal at any size. Made once.
+  let paints = null;
+  const makePaints = () => {
+    const { x0, x1 } = T.BOX;
+    const coat = ctx.createLinearGradient(x0, 0, x1, 0);
+    for (let x = x0; x <= x1; x += 6) coat.addColorStop((x - x0) / (x1 - x0), ok(mix(C.fur, C.furHi, T.rear(x))));
+    const belly = ctx.createLinearGradient(0, -37, 0, -22);
+    belly.addColorStop(0, ok(C.belly, 0));
+    belly.addColorStop(1, ok(C.belly, 0.4));
+    const shade = (x, y, r, c, a) => {
+      const gr = ctx.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, ok(c, a));
+      gr.addColorStop(1, ok(c, 0));
+      return [gr, x, y, r];
+    };
+    paints = {
+      coat, belly, light: ok(C.light), far: ok(C.far), mouth: ok(C.mouth), tooth: ok(C.tooth), tongue: ok(C.tongue), eye: ok(C.eye), band: ok(C.band),
+      // Shoulder and chest fall into shadow under the light; the haunch catches it on top.
+      shades: [shade(113, -26, 14, C.band, 0.22), shade(58, -52, 15, C.furHi, 0.25)],
+    };
   };
 
   // Colours, mixed once per frame from the tokens.
@@ -231,7 +301,7 @@
     sg.fillRect(0, ground, W, 1);
   };
 
-  let phase = 0, travel = 0, runNow = 0;
+  let phase = 0, travel = 0, runNow = 0, sNow = 1;
 
   const frameAt = (p) => {
     const a = Math.min(Math.floor(p), last - 1);
@@ -243,8 +313,12 @@
     const { a, t, A, B } = frameAt(p);
     const light = lerp(A.light, B.light, t) * rise;
     const s = a === 0 ? scales[1] : lerp(scales[a], scales[a + 1], t);
+    sNow = s;
     const cx = lerp(A.x, B.x, t) * W;
     const ax = cx - (SPAN * s) / 2 - T.BOX.x0 * s; // screen x of model x = 0
+    // m: the stripes become the animal's bars. f: the bars take their final paint.
+    const m = smooth(clamp(p / 0.85, 0, 1));
+    const f = smooth(clamp((m - 0.9) / 0.1, 0, 1));
 
     const g = ctx;
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -252,82 +326,155 @@
     g.drawImage(sky, 0, 0);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Ground marks: rows of short dashes, nearer rows faster, so running reads as travel.
+    // Ground marks: rows of short dashes. The top row moves with the planted feet; nearer rows faster.
     for (let r = 0; r < 4; r++) {
       const y = ground + 7 + r * 7 + r * r * 4;
       const gap = 42 + r * 22, len = 8 + r * 6;
-      const off = (((travel * (0.6 + r * 0.45)) % gap) + gap) % gap;
+      const off = (((travel * [1, 1.25, 1.6, 2.1][r]) % gap) + gap) % gap;
       g.fillStyle = ok(C.rim, (0.16 + r * 0.05) * light);
       for (let x = -off; x < W; x += gap) g.fillRect(x, y, len, 1);
     }
 
-    // Morph: 0 is the plain row, 1 is the animal. Done by the end of the first scroll stretch.
-    const m = smooth(clamp(p / 0.85, 0, 1));
-    const sp = spansFor(phase, runNow);
-    const pitchA = (SPAN / N) * s;
-    const fieldL = W / H < 0.9 ? 16 : Math.max(16, W * 0.05);
-    const fieldR = W - fieldL;
-    const pitch0 = (fieldR - fieldL) / N;
-    const top0 = clamp(boxes[0] + H * 0.06, H * 0.42, ground - 40);
-
-    // Pass 1: where each stripe is and the spans it covers, morphed. A column with no span shrinks into the ground.
+    const hit = spansFor(phase, runNow, gapeNow);
     const MX = T.MAX;
-    for (let k = 0; k < N; k++) {
-      // Tail end leads, head follows, so the animal assembles from the back like a wave.
-      const e = smooth(clamp(m * 1.5 - (k / N) * 0.5, 0, 1));
-      const grow = smooth(clamp(rise * 2 - (k / N) * 0.8, 0, 1));
-      const t0 = lerp(ground, top0, grow);
-      const n = sp.counts[k];
-      E[k] = e;
-      X[k] = lerp(fieldL + (k + 0.5) * pitch0, ax + xs[k] * s, e);
-      CN[k] = n;
-      if (!n) { TOPS[k * MX] = lerp(t0, ground, e); BOTS[k * MX] = ground; }
-      for (let j = 0; j < n; j++) {
-        TOPS[k * MX + j] = lerp(t0, ground + sp.out[(k * MX + j) * 2] * s, e);
-        BOTS[k * MX + j] = lerp(ground, ground + sp.out[(k * MX + j) * 2 + 1] * s, e);
+    if (!paints) makePaints();
+    const P = paints;
+
+    if (f < 0.999) {
+      const fieldL = W / H < 0.9 ? 16 : Math.max(16, W * 0.05);
+      const pitch0 = (W - 2 * fieldL) / N;
+      const top0 = clamp(boxes[0] + H * 0.06, H * 0.42, ground - 40);
+      // Pass 1: each stripe moves from its place in the row to its column of the animal and takes the spans
+      // the silhouette covers there. A column with no span sinks into the ground.
+      for (let k = 0; k < N; k++) {
+        // Tail end leads, head follows, so the animal assembles from the back like a wave.
+        const e = smooth(clamp(m * 1.5 - (k / N) * 0.5, 0, 1));
+        const grow = smooth(clamp(rise * 2 - (k / N) * 0.8, 0, 1));
+        const t0 = lerp(ground, top0, grow);
+        const n = hit.counts[k];
+        E[k] = e;
+        X[k] = lerp(fieldL + (k + 0.5) * pitch0, ax + xs[k] * s, e);
+        CN[k] = n;
+        if (!n) { TOPS[k * MX] = lerp(t0, ground, e); BOTS[k * MX] = ground; }
+        for (let j = 0; j < n; j++) {
+          TOPS[k * MX + j] = lerp(t0, ground + hit.out[(k * MX + j) * 2] * s, e);
+          BOTS[k * MX + j] = lerp(ground, ground + hit.out[(k * MX + j) * 2 + 1] * s, e);
+        }
+      }
+      const width = (k) => lerp(pitch0 * 0.6, ws[k] * s, E[k]);
+      // A stripe in flight is a plain bar. Once it has all but landed, it takes its column of the finished
+      // animal (bars cut by the smooth outline), copied from the standing render.
+      const img = stillFor(hit, s);
+      const ox = ax + T.BOX.x0 * s, oy = ground - TOP * s;
+      for (let k = 0; k < N; k++) {
+        const e = E[k];
+        if (e >= 0.98) {
+          const l = k ? (xs[k - 1] + xs[k]) / 2 : T.BOX.x0, r = k < N - 1 ? (xs[k] + xs[k + 1]) / 2 : T.BOX.x1;
+          const sx = Math.max(0, Math.floor((l - T.BOX.x0) * s * dpr)), sw = Math.min(img.width - sx, Math.ceil((r - l) * s * dpr) + 1);
+          const dx = X[k] - (ax + xs[k] * s);
+          if (sw > 0) g.drawImage(img, sx, 0, sw, img.height, ox + dx + sx / dpr, oy, sw / dpr, img.height / dpr);
+          continue;
+        }
+        const w = width(k);
+        const to = kinds[k] === 3 ? C.accent : kinds[k] === 2 ? C.light : mix(C.fur, C.furHi, T.rear(xs[k]));
+        g.fillStyle = ok(mix(kinds[k] === 3 ? C.accent : C.stripeHi, to, e));
+        for (let j = 0; j < Math.max(1, CN[k]); j++) {
+          const tt = TOPS[k * MX + j], bb = BOTS[k * MX + j];
+          if (bb - tt > 0.5) g.fillRect(X[k] - w / 2, tt, w, bb - tt);
+        }
       }
     }
-    // Once formed, each span's ends meet the matching span next door, so outlines run smooth instead of stepping.
-    const jump = 6 * s;
-    const meet = (arr, k, j, d) => {
-      const o = k + d, v = arr[k * MX + j];
-      if (o < 0 || o >= N || !CN[o] || !CN[k]) return v;
-      for (let i = 0; i < CN[o]; i++) {
-        const u = arr[o * MX + i];
-        if (Math.abs(u - v) < jump && BOTS[o * MX + i] > TOPS[k * MX + j] && TOPS[o * MX + i] < BOTS[k * MX + j]) return lerp(v, (u + v) / 2, E[k]);
-      }
-      return v;
-    };
-    // Pass 2: draw.
-    for (let k = 0; k < N; k++) {
-      const e = E[k], x = X[k], amber = k === amberK;
-      const rearT = clamp((112 - xs[k]) / 26, 0, 1) * clamp((xs[k] - 16) / 10, 0, 1);
-      const w = lerp(pitch0 * 0.6, pitchA + 0.6, e);
-      const l = x - w / 2, r = x + w / 2;
-      g.fillStyle = ok(mix(amber ? C.accent : C.stripeHi, mix(C.fur, C.furHi, rearT), e));
-      for (let j = 0; j < Math.max(1, CN[k]); j++) {
-        if (BOTS[k * MX + j] - TOPS[k * MX + j] <= 0.5) continue;
-        g.beginPath();
-        g.moveTo(l, meet(TOPS, k, j, -1));
-        g.lineTo(r, meet(TOPS, k, j, 1));
-        g.lineTo(r, meet(BOTS, k, j, 1));
-        g.lineTo(l, meet(BOTS, k, j, -1));
-        g.fill();
-      }
-      const band = T.bandAt(xs[k]);
-      if (band.depth && CN[k] && e > 0.01) {
-        // Dark bands from the spine down the flank: on the body a fixed length, on the tail most of its depth.
-        const span = BOTS[k * MX] - TOPS[k * MX];
-        const depth = xs[k] < 46 ? span * band.depth : Math.min(span, 25 * s * band.depth);
-        const d = amber ? Math.max(depth, span * (1 - e)) : depth * e;
-        const tl = meet(TOPS, k, 0, -1), tr = meet(TOPS, k, 0, 1);
-        // One band is the survivor: amber instead of dark.
-        g.fillStyle = band.amber ? (amber ? col.amber : ok(C.accent, e)) : ok(C.band, e);
-        g.beginPath();
-        g.moveTo(l, tl); g.lineTo(r, tr); g.lineTo(r, tr + d); g.lineTo(l, tl + d);
-        g.fill();
+
+    if (f >= 0.999) {
+      g.setTransform(dpr * s, 0, 0, dpr * s, dpr * ax, dpr * ground);
+      drawFormed(g, hit, s);
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+  };
+
+  /* The formed animal, in model space: bars with gaps, cut by the smooth outline. Far legs in shade, then tail,
+     body and near legs in the coat, the light bars between bands, the dark band tops, the amber bar, light and
+     shade on the bars only. The head and ears are bars on the same grid, finer over the head; the lower jaw is
+     its own group of bars that turns about the hinge. Then the detail as small solid marks. */
+  const drawFormed = (g, hit, s) => {
+    const P = paints, D = hit.geo.detail, px = 1 / s, J = hit.geo.jaw;
+    g.save();
+    g.clip(hit.far);
+    g.fillStyle = P.far;
+    g.fill(barPaths.all);
+    g.restore();
+    // The open mouth: a dark wedge behind the bars, with the tongue on its floor.
+    if (hit.mouth) {
+      g.fillStyle = P.mouth;
+      g.fill(hit.mouth);
+      if (hit.tongue) {
+        g.save();
+        g.clip(hit.mouth);
+        g.fillStyle = P.tongue;
+        g.fill(hit.tongue);
+        g.restore();
       }
     }
+    // The lower jaw: its own bars, laid out at rest and turned about the hinge.
+    g.save();
+    g.translate(J.hinge[0], J.hinge[1]);
+    g.rotate(J.angle);
+    g.translate(-J.hinge[0], -J.hinge[1]);
+    g.clip(hit.jaw);
+    g.fillStyle = P.coat;
+    g.fill(barPaths.coat);
+    g.restore();
+    g.save();
+    g.clip(hit.coat);
+    g.fillStyle = P.coat;
+    g.fill(barPaths.coat);
+    g.fillStyle = P.light;
+    g.fill(barPaths[2]);
+    g.fillStyle = col.amber;
+    g.fill(barPaths[3]);
+    for (const [gr] of P.shades) { g.fillStyle = gr; g.fill(barPaths.all); }
+    g.save();
+    g.clip(hit.body);
+    g.fillStyle = P.belly;
+    g.fill(barPaths.all);
+    g.restore();
+    g.fillStyle = P.band;
+    g.fill(hit.dark);
+    g.restore();
+    // Detail: small solid marks on the bars, scaled with the animal; the finest drop out at small sizes.
+    g.fillStyle = P.band;
+    g.fill(hit.ear);
+    if (s >= 2.2) g.fill(hit.claws);
+    if (s >= 3.2 && D.teeth.length) { g.fillStyle = P.tooth; g.fill(hit.teeth); }
+    g.fillStyle = P.eye;
+    g.beginPath();
+    g.ellipse(D.eye.x, D.eye.y, Math.max(D.eye.rx, 1.3 * px), Math.max(D.eye.ry, 1 * px), D.eye.a, 0, Math.PI * 2);
+    g.fill();
+    g.fill(hit.nose);
+    g.strokeStyle = P.band;
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    g.lineWidth = Math.max(0.45, 1.1 * px);
+    const line = (pts) => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.stroke(); };
+    // Closed, the two jaws meet along one dark mouth line.
+    if (D.lip) line(D.lip);
+    if (s >= 2.4) line(D.brow);
+  };
+
+  // The standing animal, rendered once per size, which the landing stripes copy their final look from.
+  const still = document.createElement('canvas');
+  const stg = still.getContext('2d');
+  let stillKey = '';
+  const stillFor = (hit, s) => {
+    const key = `${s.toFixed(3)}|${dpr}|${N}|${hit.key}`;
+    if (key !== stillKey) {
+      stillKey = key;
+      still.width = Math.ceil(SPAN * s * dpr);
+      still.height = Math.ceil((TOP + 4) * s * dpr);
+      stg.setTransform(dpr * s, 0, 0, dpr * s, -T.BOX.x0 * s * dpr, TOP * s * dpr);
+      drawFormed(stg, hit, s);
+    }
+    return still;
   };
 
   /* ---------- Type choreography ---------- */
@@ -370,49 +517,76 @@
     });
   };
 
-  /* ---------- Scroll to timeline ---------- */
+  /* ---------- Scroll to timeline ----------
+     Scroll is the timeline, gait included: the legs move only as far as the page moves, backwards when
+     scrolling back, and stop when it stops. One gait cycle takes STRIDE_VH of the viewport in scroll. */
 
   const span = () => film.offsetHeight - innerHeight;
   const go = (i, smoothly = true) => {
     scrollTo({ top: film.offsetTop + (i / last) * span(), behavior: smoothly ? 'smooth' : 'auto' });
   };
-
-  let target = 0, shown = 0, running = false, rise = 0;
-  const t0 = performance.now();
-  const RISE_MS = 1600;
-
-  let prevT = 0;
+  // Each frame holds for the last 30% of its stretch of scroll, so a scene lands and stays.
+  const held = (x) => {
+    const i = Math.min(Math.floor(x), last);
+    return i + clamp((x - i - 0.15) / 0.7, 0, 1);
+  };
   const runAt = (p) => {
     const { t, A, B } = frameAt(p);
     return lerp(A.run, B.run, t);
   };
+
+  // Gait distance: scroll pixels weighted by how hard the animal runs there, tabulated per size.
+  const STRIDE_VH = 0.34, STEP = 2;
+  let gaitTab = new Float32Array(1), spanPx = 1, stridePx = 1;
+  const gaitTable = () => {
+    spanPx = Math.max(1, span());
+    stridePx = innerHeight * STRIDE_VH;
+    const n = Math.ceil(spanPx / STEP) + 1;
+    gaitTab = new Float32Array(n + 1);
+    for (let j = 1; j <= n; j++) {
+      const x = clamp(((j - 0.5) * STEP) / spanPx, 0, 1) * last;
+      gaitTab[j] = gaitTab[j - 1] + runAt(held(x)) * STEP;
+    }
+  };
+  const gaitAt = (px) => {
+    const u = clamp(px, 0, spanPx) / STEP, j = Math.floor(u);
+    return lerp(gaitTab[j], gaitTab[Math.min(j + 1, gaitTab.length - 1)], u - j) / stridePx;
+  };
+
+  let pxTarget = 0, pxShown = 0, shown = 0, running = false, rise = 0, cycles = 0, gapeNow = 0;
+  const t0 = performance.now();
+  const RISE_MS = 1600;
+
   const tick = (now) => {
-    const dt = prevT ? Math.min((now - prevT) / 1000, 0.05) : 0;
-    prevT = now;
-    const before = shown;
-    shown += (target - shown) * 0.09;
-    if (Math.abs(target - shown) < 0.0005) shown = target;
+    // Ease the scroll position, then derive everything from it, so a flick never jumps a frame.
+    pxShown += (pxTarget - pxShown) * 0.09;
+    if (Math.abs(pxTarget - pxShown) < 0.3) pxShown = pxTarget;
     const r = clamp((now - t0) / RISE_MS, 0, 1);
     rise = 1 - Math.pow(1 - r, 3);
-    // The gait runs on time, so the animal keeps moving when scrolling stops; scrolling adds a push.
+    shown = held((pxShown / spanPx) * last);
     runNow = runAt(shown);
-    const push = Math.abs(shown - before) * 1.5;
-    phase = (phase + (dt * 1.5 + push) * runNow) % 1;
-    travel += (dt * 1.5 + push) * runNow * 25 * (scales[2] || 1);
+    // Gait follows scroll distance; at most 0.45 of a stride per frame, so legs never strobe backward.
+    const want = gaitAt(pxShown);
+    const dc = clamp(want - cycles, -0.45, 0.45);
+    cycles += dc;
+    if (Math.abs(want - cycles) < 1e-4) cycles = want;
+    phase = ((cycles % 1) + 1) % 1;
+    // The ground moves exactly as far as a planted paw slides back, so the feet stay put on it.
+    travel += dc * (T.STRIDE / T.STANCE) * runNow * sNow;
+    // At the end it has stopped, and opens its jaws wide, slowly. Scroll back and it closes them.
+    const gapeTo = smooth(clamp((shown - (last - 0.2)) / 0.2, 0, 1)) * (1 - runNow);
+    gapeNow += (gapeTo - gapeNow) * 0.05;
+    if (Math.abs(gapeTo - gapeNow) < 0.002) gapeNow = gapeTo;
     draw(shown, rise);
     paintType(shown, rise);
-    if (shown !== target || r < 1 || runNow > 0.01) requestAnimationFrame(tick);
-    else { running = false; prevT = 0; }
+    if (pxShown !== pxTarget || cycles !== want || gapeNow !== gapeTo || r < 1) requestAnimationFrame(tick);
+    else running = false;
   };
   const kick = () => {
     if (!running) { running = true; requestAnimationFrame(tick); }
   };
   const read = () => {
-    const s = span();
-    // Each frame holds for the last 30% of its stretch of scroll, so a scene lands and stays.
-    const x = s > 0 ? clamp((scrollY - film.offsetTop) / s, 0, 1) * last : 0;
-    const i = Math.min(Math.floor(x), last);
-    target = i + clamp((x - i - 0.15) / 0.7, 0, 1);
+    pxTarget = clamp(scrollY - film.offsetTop, 0, spanPx);
     kick();
   };
 
@@ -448,7 +622,19 @@
   const start = frames.findIndex((f) => f.scene.id && f.scene.id === location.hash.slice(1));
   if (start > 0) go(start, false);
   read();
-  shown = target;
+  pxShown = pxTarget;
+  cycles = gaitAt(pxShown);
   kick();
   if (document.fonts) document.fonts.ready.then(() => { size(); draw(shown, rise); });
+  // Build the running poses ahead of time, a few per idle slice, so scrubbing never waits on geometry.
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(() => fn({ timeRemaining: () => 8 }), 50));
+  let warm = 0;
+  const warmUp = (dl) => {
+    while (warm < (AM - 1) * PH && dl.timeRemaining() > 2) {
+      spansFor((warm % PH) / PH, (1 + Math.floor(warm / PH)) / (AM - 1), 0);
+      warm++;
+    }
+    if (warm < (AM - 1) * PH) idle(warmUp);
+  };
+  idle(warmUp);
 })();

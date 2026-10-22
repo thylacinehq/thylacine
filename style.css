@@ -45,6 +45,13 @@
   --fur: oklch(0.58 0.06 68);
   --fur-hi: oklch(0.74 0.07 74);
   --band: oklch(0.22 0.02 55);
+  --fur-far: oklch(0.5 0.05 64);
+  --fur-light: oklch(0.80 0.06 78);
+  --belly: oklch(0.84 0.05 82);
+  --mouth: oklch(0.24 0.06 28);
+  --tongue: oklch(0.46 0.09 22);
+  --tooth: oklch(0.92 0.025 85);
+  --eye: oklch(0.14 0.015 55);
   --scene-top: clamp(6.5rem, 4rem + 9vh, 10rem);
   --step-film: clamp(2.4rem, 0.9rem + 5.6vw, 7rem);
 
@@ -167,9 +174,15 @@ h1 {
   margin: 1rem 0 clamp(6rem, 12vw, 8rem) auto;
   pointer-events: none;
 }
-.t-fur { fill: var(--fur); }
-.t-fur-hi { fill: var(--fur-hi); }
+.t-far { fill: var(--fur-far); }
+.t-light { fill: var(--fur-light); }
 .t-band { fill: var(--band); }
+.t-mouth { fill: var(--mouth); }
+.t-tooth { fill: var(--tooth); }
+.t-eye { fill: var(--eye); }
+.t-line { stroke: var(--band); }
+.t-s-clear { stop-color: var(--belly); stop-opacity: 0; }
+.t-s-belly { stop-color: var(--belly); }
 .t-amber { fill: var(--accent); }
 .t-ground { stroke: var(--glow-rim); stroke-width: 0.4; }
 
