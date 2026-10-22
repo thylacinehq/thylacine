@@ -2,25 +2,24 @@
 
 Software products and bespoke digital solutions.
 
-This repo is the Thylacine company page. It is one static page of plain HTML, CSS and a small amount of vanilla JavaScript. There is no framework, no library and no build step.
+## What we build
 
-## Run it
+### Our own products
 
-Open `index.html` in a browser. To serve the folder instead, run `python3 -m http.server` and open the address it prints.
+- Developer tools
+- AI and machine learning tools
+- Open-source utilities
 
-The first screen shows straight stripes. Scroll and they gather into an animal made of bars, which walks as you scroll and stops when you stop.
+### Custom work for clients
 
-## What is here
+- Backend systems and infrastructure
+- Web and desktop apps built to a brief
 
-- `index.html` and `style.css` are the page.
-- `script.js` pins the hero and plays it as you scroll.
-- `thylacine.js` is the model that draws the animal.
-- `tools/thylacine.mjs` writes the still animal used when JavaScript is off or reduced motion is set. Run `node tools/thylacine.mjs fallback` to regenerate it.
-- `fonts/` holds Instrument Sans and Instrument Serif, self-hosted under the SIL Open Font License.
-- `DESIGN.md` records the design decisions and the one risk the page takes.
+## Projects
 
-## Notes
+Nothing is listed yet.
 
-With reduced motion, or without JavaScript, the page is a plain stacked document with a still animal.
+## Contact
 
-Frame times were measured in headless Chromium only. Phones and Safari are untested.
+thylacineworks@gmail.com
+[github.com/thylacinehq](https://github.com/thylacinehq)
