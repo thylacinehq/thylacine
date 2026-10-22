@@ -1,6 +1,6 @@
 # Design
 
-Single static page. HTML and CSS, no JavaScript, no build step. Dark by default.
+Single page. HTML and CSS plus one small vanilla script, no libraries, no build step. Dark by default. The script only drives the scroll scene; with reduced motion or no JS the page is a plain stacked document.
 
 ## Idea
 
@@ -39,15 +39,21 @@ Fluid sizes with `clamp()`. Headline line-height 0.98, tracking -0.03em, capped 
 
 ## Layout
 
-Hero fills the first screen: header row, copy block, field and horizon, CTA bottom right. Below it, an editorial split: narrow left column for the section label, wide right column for content, separated by hairlines. Under 48rem it is one column and the nav links collapse, leaving mark and Contact. No card grid.
+Hero fills the first screen: header row, copy block, field and horizon, CTA bottom right. In fallback mode the sections below it use an editorial split: narrow left column for the section label, wide right column for content, separated by hairlines. Under 48rem it is one column and the nav links collapse, leaving mark and Contact. No card grid.
 
-## Motion
+## Motion: scroll is the timeline
 
-Bars rise once on load, 700ms, ease-out, staggered 45ms. Nothing bounces. `prefers-reduced-motion: reduce` removes it and the smooth scroll.
+The reference page (EnduroSat) reads like a film because one fixed stage stays on screen while scroll scrubs it. Same idea here, at our size.
+
+The hero stage is pinned for four screens of scroll. Four scenes: intro, what we build, projects, contact. Copy cross-fades and drifts about 2rem between scenes. The stripe field re-forms for each scene: the intro skyline, a lopsided build, almost flat for projects (nothing listed, one amber bar still standing), a symmetric arch for contact. Displayed progress eases toward the real scroll position, so the field settles instead of snapping.
+
+A rail at the bottom left shows the four scenes and doubles as navigation. Header links scroll to scenes. The GitHub button stays on screen throughout.
+
+Bars rise once on load, 700ms, ease-out, staggered 45ms. Nothing bounces. With `prefers-reduced-motion: reduce`, or without JS, nothing is pinned or animated and the sections stack as normal content.
 
 ## Accessibility
 
-Visible focus ring on every link (2px accent outline, 4px offset). Decorative SVG and the bar field are `aria-hidden`. One `h1`, then `h2` per section. Body links are underlined.
+Visible focus ring on every link and rail button (2px accent outline, 4px offset). Inactive scenes are `inert`, so hidden links never take focus. Decorative SVG and the bar field are `aria-hidden`. One `h1`, then `h2` per section. Body links are underlined.
 
 ## Checks
 

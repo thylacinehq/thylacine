@@ -281,6 +281,128 @@ footer {
   .horizon { bottom: -64%; height: 80%; }
 }
 
+/* Film mode: the script pins the stage and scrubs it with scroll */
+
+.film-on .film { height: calc(100svh * var(--n, 4)); position: relative; }
+.film-on .stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 0;
+  padding-inline: 0;
+}
+.film-on .top { padding-inline: var(--gutter); }
+.film-on .field { right: var(--gutter); }
+.film-on .cta { z-index: 4; }
+
+.film-on main {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  pointer-events: none;
+}
+.film-on .scene {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: 6.5rem var(--gutter) 8rem;
+  border-top: 0;
+  opacity: var(--o, 0);
+  transform: translateY(var(--y, 0));
+  visibility: hidden;
+}
+.film-on .scene.on { visibility: visible; pointer-events: auto; }
+.film-on .copy.scene { align-self: auto; }
+
+.film-on section h2 {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: var(--step-0);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.film-on section .body { max-width: 56rem; }
+.film-on .body > .row {
+  padding-block: 1rem 0;
+  margin-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+.film-on .body > .row:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.film-on h3 {
+  font-size: clamp(1.5rem, 0.8rem + 3.2vw, 3.25rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.film-on .empty {
+  color: var(--text);
+  font-weight: 700;
+  font-size: var(--step-hero);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  max-width: 11ch;
+}
+.film-on .plain li {
+  font-weight: 700;
+  font-size: clamp(1.25rem, 0.6rem + 3vw, 3rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.film-on footer { position: relative; z-index: 1; }
+
+.rail {
+  position: absolute;
+  z-index: 4;
+  left: var(--gutter);
+  bottom: clamp(1.5rem, 4vw, 3rem);
+  display: flex;
+  gap: 0.5rem;
+}
+.rail button {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  gap: 0.5rem;
+  width: clamp(2.75rem, 8vw, 8.5rem);
+  min-width: 0;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rail button[aria-current] { color: var(--text); }
+.rail button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.rail .lab { display: none; }
+.rail .bar { display: block; height: 3px; background: var(--rule); }
+.rail .fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+@media (min-width: 48rem) {
+  .rail button { width: clamp(5.25rem, 8vw, 8.5rem); }
+  .rail .lab { display: block; white-space: nowrap; }
+  .film-on .body > .rows,
+  .film-on #scene-build .body { display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; max-width: none; }
+  .film-on #scene-build .body > .row { margin-top: 0; padding-top: 1rem; border-top: 1px solid var(--rule); }
+  .film-on #scene-build .body > .row:first-child { padding-top: 1rem; border-top: 1px solid var(--rule); }
+}
+@media (max-width: 47.99rem) {
+  .film-on .scene { padding-bottom: 7rem; }
+  .film-on .field { height: 36%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .field i { animation: none; }
   html { scroll-behavior: auto; }
