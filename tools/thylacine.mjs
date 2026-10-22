@@ -39,8 +39,9 @@ export function animal(phase, amp, gape = 0, cls = true, id = 'a') {
   s += `<clipPath id="${id}-ccoat"><path d="${geo.coat.map((p) => d(p)).join('')}"/></clipPath>`;
   s += `<clipPath id="${id}-cbody"><path d="${d(geo.body)}"/></clipPath>`;
   s += `<clipPath id="${id}-cjaw"><path d="${d(geo.jaw.rest)}"/></clipPath></defs>`;
-  s += `<g clip-path="url(#${id}-cfar)"><path ${coat} d="${bars([0, 1, 2, 3])}"/>`;
-  s += `<path ${paint('t-shade', '#5a3c1e')} opacity="0.5" d="${bars([0, 1, 2, 3])}"/></g>`;
+  s += `<g clip-path="url(#${id}-cfar)"><path ${coat} d="${bars([0, 1])}"/>`;
+  s += `<path ${paint('t-light', '#d9c49c')} d="${bars([2])}"/><path ${paint('t-amber', '#e9a640')} d="${bars([3])}"/>`;
+  s += `<path ${paint('t-shade', '#5a3c1e')} opacity="0.1" d="${bars([0, 1, 2, 3])}"/></g>`;
   if (geo.mouth) s += `<path ${paint('t-mouth', '#3a1d18')} d="${d(geo.mouth)}"/>`;
   const [hx, hy] = geo.jaw.hinge;
   s += `<g transform="rotate(${f((geo.jaw.angle * 180) / Math.PI)} ${f(hx)} ${f(hy)})"><path clip-path="url(#${id}-cjaw)" ${coat} d="${bars([0, 1])}"/></g>`;

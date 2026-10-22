@@ -63,8 +63,10 @@
   const BODY_PIVOT = [88, -45];
 
   // Legs: root joint, two bones to the wrist or hock, then the foot to the ball of the paw.
-  // Front: elbow behind, straight sturdy forearm. Hind: knee forward, raised heel (hock) on a long foot.
-  const FRONT = { root: [116, -42], a: 18.5, b: 18.1, toe: 119.5, foot: [4.2, 4.6], r: [10.5, 7.4, 4.7, 3.6], bend: 1, paw: 1.3 };
+  // Front: the elbow sits a little behind, so the forearm angles slightly forward down to a visible wrist, then a
+  // short sloped pastern to the paw. The leg is never fully straight standing, so it flexes through the stride:
+  // straight at full reach, folded as it tucks. Hind: knee forward, raised heel (hock) on a long foot.
+  const FRONT = { root: [117.5, -42], a: 18.5, b: 18.1, toe: 119.5, foot: [5.6, 6.2], r: [10.5, 7.4, 4.7, 3.6], bend: 1, paw: 1.3, wrist: true };
   const HIND = { root: [56, -47], a: 20.2, b: 20.7, toe: 64.5, foot: [8, 10.4], r: [14.5, 8.4, 4.5, 3.4], bend: -1, paw: 1.32, heel: true };
   // Tail: thick at the root, tapering; hangs at about 45 degrees standing, lifts toward level when running.
   const TAIL = {
@@ -242,6 +244,7 @@
       const out = leg.far ? L.far : L.near;
       capsules([r0, knee, ankle, [tx, ty]], d.r.map((r) => r * k), out);
       if (d.heel) out.push(disc([ankle[0] - 1.8, ankle[1] + 0.6], 3.6 * k, 10));
+      if (d.wrist) out.push(disc([ankle[0] - 0.9, ankle[1] - 0.4], 4.3 * k, 10));
       if (!front) out.push(disc([knee[0] + 1, knee[1] + 1], 7.6 * k, 14));
       // The paw.
       const curl = sw * 0.9, ps = d.paw * k;

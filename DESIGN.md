@@ -20,7 +20,8 @@ Why it fits: the thylacine was written off as extinct in 1936. Here it is, still
 
 - One column grid for the whole animal (`layout()` in `thylacine.js`). Plain bars behind the rump and in front of the shoulder. Over the rump and tail base, 15 bands: a broad dark-topped bar and a narrow light bar each, the ninth amber, with the same bar to gap ratio as the plain bars (about 2 to 1). The forebody bars are plain and quieter.
 - Over the neck the pitch narrows smoothly to 0.6 of the body pitch across the head (`HEAD_PITCH`), so the muzzle and ears keep enough bars to read at 360. The bar to gap ratio stays the same, so the neck shows no seam.
-- Far legs and far ear: the same coat bars, opaque, with a warm shade over them for depth. Tail, body, near legs, head, near ear and cheek: the coat, lighter toward the rump, with shade on the chest and light on the haunch, and a lighter belly.
+- Far legs and far ear: the same bars and paints as the near side, opaque, with a warm shade at 10% over them for depth. Measured at 1440, far legs keep about 85% of the near legs' bar to gap contrast.
+- Bar edges are snapped to whole device pixels for the current scale and position, so no gap falls under one pixel and the bars stay crisp at 360. Tail, body, near legs, head, near ear and cheek: the coat, lighter toward the rump, with shade on the chest and light on the haunch, and a lighter belly.
 - The lower jaw is its own group of bars. It is laid out closed, on the same grid, and turned about one hinge behind the cheek, so its bars lean as it drops. The open mouth is a dark wedge behind the bars, with a tongue on its floor. Closed, the two jaws meet on one dark mouth line.
 - Detail is small solid marks on the bars: eye, brow, nose, inner ears, claws, and two or three small teeth. Teeth show only at 1440-size scales and only once the mouth is well open. Claws and brow drop out at small sizes.
 
@@ -30,7 +31,7 @@ Why it fits: the thylacine was written off as extinct in 1936. Here it is, still
 
 - Body, head and lower jaw are closed curves. The back is highest over the hips; the belly tucks up toward the hind legs.
 - The head is a long level wedge carried low, in line with the back: a nearly flat skull, a gentle stop, a long straight muzzle ending blunt in a small dark nose. Ears are medium, upright and set back. The eye is small and set high, about a third of the way back from the nose. The outline was fitted by overlay on a natural-history illustration the user supplied.
-- Tail and four legs are tapered capsules on joints, the tail thick at the root. Legs are short and sturdy. The thigh is thick, the forelegs straight, and the chest sits about 35% of shoulder height off the ground. Two-bone IK: the front elbow folds back, the hind knee forward to a raised hock on a long foot. Paws are broad: a heel pad, an instep and four short toes, with claws as small marks at larger sizes.
+- Tail and four legs are tapered capsules on joints, the tail thick at the root. Legs are short and sturdy. The thigh is thick, the forelegs straight, and the chest sits about 35% of shoulder height off the ground. Two-bone IK: the front elbow sits a little back, so the forearm angles forward to a visible wrist and the leg straightens at full reach and folds as it tucks; the hind knee forward to a raised hock on a long foot. Paws are broad: a heel pad, an instep and four short toes, with claws as small marks at larger sizes.
 - A gait function of phase drives a trot in diagonal pairs. Running, the body drops and stretches, the head bobs, the legs reach, and the tail lifts toward level.
 - `pose(phase, stride, gape)` takes gape from 0 to 1. Full gape is `GAPE_DEG`, 55, set by eye. The often-quoted figure is 120 degrees. The Wikipedia article gives up to 80, citing two papers. At 80 the jaw bars turn nearly flat and the jaw hangs like a plank. At 55 the mouth is still a long open triangle.
 - `spans()` samples the polygons column by column for the morph.
@@ -53,7 +54,7 @@ All colour is OKLCH, defined once as custom properties. The script reads the sam
 | `--sky`, `--body` | `oklch(0.30 0.06 62)`, `oklch(0.13 0.012 65)` | warm air above the ground, ground |
 | `--stripe`, `--stripe-hi`, `--stripe-lit` | `0.27`, `0.36`, `0.62` lightness | opening stripes, mark |
 | `--fur`, `--fur-hi`, `--fur-light` | `0.58`, `0.74`, `0.80` lightness | coat front, coat rear, light band bars |
-| `--fur-shade` | `oklch(0.40 0.08 55)` | laid at half strength over the far legs and far ear |
+| `--fur-shade` | `oklch(0.40 0.08 55)` | laid at 10% over the far legs and far ear |
 | `--belly` | `oklch(0.84 0.05 82)` | lighter underside |
 | `--band`, `--eye` | `0.22`, `0.14` lightness | dark band tops, inner ears, lines; eye and nose |
 | `--mouth`, `--tongue`, `--tooth` | `0.24`, `0.46`, `0.92` lightness | the open mouth |

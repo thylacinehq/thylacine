@@ -171,17 +171,7 @@
       xs = lay.xs; ws = lay.ws; kinds = lay.kind;
       // The amber stripe in the opening row becomes the amber bar on the rump.
       amberK = kinds.indexOf(3);
-      // Full-height bars in model space, one path per kind, for painting the formed animal.
-      barPaths = [0, 1, 2, 3].map((kd) => {
-        const path = new Path2D();
-        xs.forEach((x, k) => { if (kinds[k] === kd) path.rect(x - ws[k] / 2, T.BOX.top - 4, ws[k], -T.BOX.top + 4); });
-        return path;
-      });
-      barPaths.all = new Path2D();
-      barPaths.forEach((path) => barPaths.all.addPath(path));
-      barPaths.coat = new Path2D();
-      barPaths.coat.addPath(barPaths[0]);
-      barPaths.coat.addPath(barPaths[1]);
+      barPaths = null;
       barDepth = lay.depth;
       E = new Float32Array(N); X = new Float32Array(N); CN = new Uint8Array(N);
       TOPS = new Float32Array(N * T.MAX); BOTS = new Float32Array(N * T.MAX);
@@ -218,13 +208,6 @@
       hit.coat = toPath(geo.coat);
       hit.jaw = toPath([geo.jaw.rest]);
       if (geo.mouth) hit.mouth = toPath([geo.mouth]);
-      // The dark part of each band bar: from the back down its band's length.
-      hit.dark = new Path2D();
-      for (let k = 0; k < N; k++) {
-        if (kinds[k] !== 1 || !hit.counts[k]) continue;
-        const top = hit.out[k * T.MAX * 2];
-        hit.dark.rect(xs[k] - ws[k] / 2, top - 1, ws[k], barDepth[k] + 1);
-      }
       const D = geo.detail;
       hit.ear = toPath(D.innerEars);
       hit.nose = toPath([D.nose]);
@@ -252,7 +235,7 @@
       return [gr, x, y, r];
     };
     paints = {
-      coat, belly, light: ok(C.light), mouth: ok(C.mouth), tooth: ok(C.tooth), tongue: ok(C.tongue), eye: ok(C.eye), band: ok(C.band), farShade: ok(C.shade, 0.5),
+      coat, belly, light: ok(C.light), mouth: ok(C.mouth), tooth: ok(C.tooth), tongue: ok(C.tongue), eye: ok(C.eye), band: ok(C.band), farShade: ok(C.shade, 0.1),
       // Shoulder and chest fall into shadow under the light; the haunch catches it on top.
       shades: [shade(113, -26, 14, C.band, 0.22), shade(58, -52, 15, C.furHi, 0.25)],
     };
@@ -387,22 +370,64 @@
 
     if (f >= 0.999) {
       g.setTransform(dpr * s, 0, 0, dpr * s, dpr * ax, dpr * ground);
-      drawFormed(g, hit, s);
+      drawFormed(g, hit, s, dpr * ax);
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
+  };
+
+  /* Full-height bars, one path per kind, in model units but with both edges on whole device pixels for the
+     current scale and position, so every bar and every gap stays crisp at any size (a gap is never under one
+     device pixel). ox: device x of model x = 0. Rebuilt only when the scale or the pixel phase changes. */
+  let barKey = '';
+  const barsAt = (s, ox) => {
+    const kk = s * dpr, base = Math.floor(ox), frac = ox - base;
+    const key = `${kk.toFixed(4)}|${frac.toFixed(3)}|${N}`;
+    if (key === barKey && barPaths) return barPaths;
+    barKey = key;
+    const top = T.BOX.top - 4, h = -T.BOX.top + 4.5;
+    const paths = [0, 1, 2, 3].map(() => new Path2D());
+    const L = new Float32Array(N), R = new Float32Array(N);
+    let prev = -Infinity;
+    for (let k = 0; k < N; k++) {
+      let l = Math.round(frac + (xs[k] - ws[k] / 2) * kk), r = Math.round(frac + (xs[k] + ws[k] / 2) * kk);
+      if (l < prev + 1) l = prev + 1;
+      if (r < l + 1) r = l + 1;
+      prev = r;
+      L[k] = (l - frac) / kk; R[k] = (r - frac) / kk;
+      paths[kinds[k]].rect(L[k], top, R[k] - L[k], h);
+    }
+    barPaths = paths;
+    paths.all = new Path2D();
+    paths.forEach((path) => paths.all.addPath(path));
+    paths.coat = new Path2D();
+    paths.coat.addPath(paths[0]);
+    paths.coat.addPath(paths[1]);
+    paths.L = L; paths.R = R;
+    return paths;
   };
 
   /* The formed animal, in model space: bars with gaps, cut by the smooth outline. Far legs in shade, then tail,
      body and near legs in the coat, the light bars between bands, the dark band tops, the amber bar, light and
      shade on the bars only. The head and ears are bars on the same grid, finer over the head; the lower jaw is
      its own group of bars that turns about the hinge. Then the detail as small solid marks. */
-  const drawFormed = (g, hit, s) => {
+  const drawFormed = (g, hit, s, ox) => {
     const P = paints, D = hit.geo.detail, px = 1 / s, J = hit.geo.jaw;
+    const barPaths = barsAt(s, ox);
+    // The dark part of each band bar: from the back down its band's length.
+    const dark = new Path2D();
+    for (let k = 0; k < N; k++) {
+      if (kinds[k] !== 1 || !hit.counts[k]) continue;
+      dark.rect(barPaths.L[k], hit.out[k * T.MAX * 2] - 1, barPaths.R[k] - barPaths.L[k], barDepth[k] + 1);
+    }
     // Far legs and far ear: the coat's own bars, opaque, a step darker for depth.
     g.save();
     g.clip(hit.far);
     g.fillStyle = P.coat;
-    g.fill(barPaths.all);
+    g.fill(barPaths.coat);
+    g.fillStyle = P.light;
+    g.fill(barPaths[2]);
+    g.fillStyle = col.amber;
+    g.fill(barPaths[3]);
     g.fillStyle = P.farShade;
     g.fill(barPaths.all);
     g.restore();
@@ -442,7 +467,7 @@
     g.fill(barPaths.all);
     g.restore();
     g.fillStyle = P.band;
-    g.fill(hit.dark);
+    g.fill(dark);
     g.restore();
     // Detail: small solid marks on the bars, scaled with the animal; the finest drop out at small sizes.
     g.fillStyle = P.band;
@@ -475,7 +500,7 @@
       still.width = Math.ceil(SPAN * s * dpr);
       still.height = Math.ceil((TOP + 4) * s * dpr);
       stg.setTransform(dpr * s, 0, 0, dpr * s, -T.BOX.x0 * s * dpr, TOP * s * dpr);
-      drawFormed(stg, hit, s);
+      drawFormed(stg, hit, s, -T.BOX.x0 * s * dpr);
     }
     return still;
   };
