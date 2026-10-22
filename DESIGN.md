@@ -10,7 +10,7 @@ The mark is the striped back: vertical bars of irregular height. No animal drawi
 
 ## The one risk
 
-The stripes are the hero visual, not a logo. Thirteen skewed bars rise from behind a glowing horizon arc on the right of the hero, all in dark umber, close to the background. One bar is amber, taller than the rest, and lit.
+The stripes are the hero visual, not a logo. Thirteen skewed bars rise from behind a glowing horizon arc on the right of the hero, all in dark umber, close to the background. One bar is amber and taller than the rest.
 
 Why it fits: the amber bar is the one that is still standing. Nothing explains it. The header mark and the favicon are the same five bars in miniature, so the big image and the small mark are one idea at two scales. A warm horizon glow in place of a cold blue one keeps it off the default space-tech palette.
 
@@ -26,8 +26,8 @@ All colour is OKLCH, defined once as custom properties. Warm neutrals (hue 65 to
 | `--rule` | `oklch(0.30 0.015 65)` | hairlines, button border |
 | `--text` | `oklch(0.95 0.02 78)` | headings, body |
 | `--text-dim` | `oklch(0.80 0.025 70)` | lists, nav |
-| `--accent` | `oklch(0.78 0.14 72)` | eyebrow, links, the lit bar, CTA |
-| `--glow`, `--glow-rim`, `--glow-bar` | accent hue at 0.35 to 0.55 alpha | horizon and lit-bar light |
+| `--accent` | `oklch(0.78 0.14 72)` | eyebrow, links, the amber bar, CTA |
+| `--glow`, `--glow-rim` | accent hue at 0.35 to 0.55 alpha | horizon rim light |
 
 Measured contrast (WCAG): text 17.00:1 on `--bg`, 17.78:1 on `--bg-deep`. Dim text 10.51:1 and 10.99:1. Accent 9.62:1 and 10.06:1. CTA arrow, `--bg-deep` on accent, 10.06:1.
 

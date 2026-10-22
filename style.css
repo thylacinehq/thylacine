@@ -36,7 +36,6 @@
   --accent: oklch(0.78 0.14 72);
   --glow: oklch(0.62 0.12 72 / 0.35);
   --glow-rim: oklch(0.80 0.10 72 / 0.55);
-  --glow-bar: oklch(0.78 0.14 72 / 0.55);
 
   --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --sans: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
@@ -172,7 +171,6 @@ h1 {
 }
 .field i.alive {
   background: var(--accent);
-  box-shadow: 0 0 3rem var(--glow-bar);
 }
 
 @keyframes rise {
