@@ -28,6 +28,7 @@
 
   --bg: oklch(0.15 0.012 65);
   --bg-deep: oklch(0.10 0.01 65);
+  --bg-deep-clear: oklch(0.10 0.01 65 / 0);
   --stripe: oklch(0.27 0.02 65);
   --stripe-hi: oklch(0.36 0.03 65);
   --rule: oklch(0.30 0.015 65);
@@ -36,6 +37,13 @@
   --accent: oklch(0.78 0.14 72);
   --glow: oklch(0.62 0.12 72 / 0.35);
   --glow-rim: oklch(0.80 0.10 72 / 0.55);
+
+  /* The world drawn on the canvas. Alpha is applied by the script. */
+  --sky: oklch(0.30 0.06 62);
+  --body: oklch(0.13 0.012 65);
+  --stripe-lit: oklch(0.62 0.07 68);
+  --scene-top: clamp(6.5rem, 4rem + 9vh, 10rem);
+  --step-film: clamp(2.4rem, 0.9rem + 5.6vw, 7rem);
 
   --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --sans: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
@@ -48,7 +56,6 @@
   --step-2: clamp(1.75rem, 1.4rem + 1.6vw, 2.75rem);
   --step-hero: clamp(2.5rem, 0.9rem + 6.6vw, 7.5rem);
 
-  --bar-unit: clamp(0.3rem, 0.15rem + 0.55vw, 0.85rem);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -88,7 +95,7 @@ a:focus-visible {
   overflow: hidden;
   min-height: max(100svh, 40rem);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr;
   padding-inline: var(--gutter);
   background: var(--bg-deep);
 }
@@ -104,7 +111,8 @@ a:focus-visible {
 }
 .brand { display: block; line-height: 0; }
 .brand svg { width: 2.75rem; height: 2.75rem; }
-.m-dim { fill: var(--stripe-hi); }
+.m-rim { fill: none; stroke: var(--glow-rim); stroke-width: 1; }
+.m-dim { fill: var(--stripe-lit); }
 .m-lit { fill: var(--accent); }
 .top nav { display: none; gap: 2.5rem; }
 .top nav a {
@@ -125,8 +133,7 @@ a:focus-visible {
 .copy {
   position: relative;
   z-index: 3;
-  align-self: center;
-  padding-block: 2rem 18vh;
+  padding-block: clamp(2rem, 8vh, 6rem) 2.5rem;
 }
 .eyebrow {
   margin-bottom: 1rem;
@@ -146,52 +153,21 @@ h1 {
   text-transform: uppercase;
 }
 
-/* Striped back rising from behind the horizon */
+/* The striped back: a lit spine with even, tapering stripes. Static here; the script redraws it on canvas. */
 
-.field {
-  position: absolute;
+.back {
+  position: relative;
   z-index: 1;
-  inset: auto var(--gutter) 0 auto;
-  width: min(100% - 2 * var(--gutter), 46rem);
-  height: 72%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  pointer-events: none;
-}
-.field i {
   display: block;
-  width: calc(var(--w) * var(--bar-unit));
-  height: var(--h);
-  background: linear-gradient(to top, var(--stripe-hi), var(--stripe));
-  transform: skewX(-8deg);
-  transform-origin: bottom;
-  animation: rise 700ms ease-out both;
-  animation-delay: calc(var(--i) * 45ms);
-}
-.field i.alive {
-  background: var(--accent);
-}
-
-@keyframes rise {
-  from { transform: skewX(-8deg) scaleY(0); }
-  to { transform: skewX(-8deg) scaleY(1); }
-}
-
-.horizon {
-  position: absolute;
-  z-index: 2;
-  left: -25%;
-  right: -25%;
-  bottom: -62%;
-  height: 80%;
-  border-radius: 50%;
-  background: var(--bg-deep);
-  box-shadow:
-    0 -1px 0 var(--glow-rim),
-    0 -2.5rem 6rem var(--glow);
+  width: calc(100% + 2 * var(--gutter));
+  height: 100%;
+  min-height: 13rem;
+  margin-inline: calc(-1 * var(--gutter));
   pointer-events: none;
 }
+.back-rim { fill: none; stroke: var(--glow-rim); stroke-width: 1.5; }
+.back-stripes { fill: var(--stripe-hi); }
+.back-lit { fill: var(--accent); }
 
 .cta {
   position: absolute;
@@ -259,7 +235,9 @@ h3 {
 .plain a { overflow-wrap: anywhere; }
 
 footer {
-  padding: 0 var(--gutter) 2.5rem;
+  margin-inline: var(--gutter);
+  padding-block: 2rem 2.5rem;
+  border-top: 1px solid var(--rule);
   color: var(--text-dim);
   font-size: 0.875rem;
   letter-spacing: 0.04em;
@@ -275,29 +253,58 @@ footer {
   section .body { grid-column: 5 / 13; max-width: 44rem; }
 }
 
-@media (max-width: 47.99rem) {
-  .copy { padding-bottom: 30vh; }
-  .field { height: 36%; }
-  .horizon { bottom: -64%; height: 80%; }
-}
+/* Film mode: the script pins the stage, draws the back on three canvases and scrubs it with scroll */
 
-/* Film mode: the script pins the stage and scrubs it with scroll */
-
-.film-on .film { height: calc(100svh * var(--n, 4)); position: relative; }
+.film-on .film { height: calc(115svh * (var(--n, 5) - 1) + 100svh); position: relative; }
 .film-on .stage {
   position: sticky;
   top: 0;
   height: 100svh;
   min-height: 0;
   padding-inline: 0;
+  display: block;
 }
-.film-on .top { padding-inline: var(--gutter); }
-.film-on .field { right: var(--gutter); }
-.film-on .cta { z-index: 4; }
+.film-on .back { display: none; }
+/* The film is the whole page: no strip after it, one background to the last pixel. */
+.film-on body { background: var(--bg-deep); }
+.film-on footer { display: none; }
+
+.world {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+.scrim {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  height: clamp(7rem, 22vh, 12rem);
+  background: linear-gradient(to top, var(--bg-deep) 35%, var(--bg-deep-clear));
+  pointer-events: none;
+}
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.film-on .top {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 5;
+  padding-inline: var(--gutter);
+}
+.film-on .cta { z-index: 5; }
 
 .film-on main {
   position: absolute;
   inset: 0;
+  z-index: 3;
   padding: 0;
   pointer-events: none;
 }
@@ -305,20 +312,34 @@ footer {
   position: absolute;
   inset: 0;
   z-index: 3;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1rem;
-  padding: 6.5rem var(--gutter) 8rem;
+  display: block;
+  padding: var(--scene-top) var(--gutter) 0;
   border-top: 0;
-  opacity: var(--o, 0);
-  transform: translateY(var(--y, 0));
   visibility: hidden;
+  pointer-events: none;
 }
-.film-on .scene.on { visibility: visible; pointer-events: auto; }
-.film-on .copy.scene { align-self: auto; }
+.film-on .copy.scene { align-self: normal; }
+.film-on .scene > *,
+.film-on .scene .body > * { pointer-events: auto; }
+.film-on .copy,
+.film-on .scene .body,
+.film-on .scene .row {
+  transform-origin: 0 0;
+  will-change: transform, opacity, filter;
+}
+.film-on .w,
+.film-on .scene li,
+.film-on .eyebrow { display: inline-block; will-change: transform; }
+.film-on .scene li { display: block; }
+
+.film-on h1 {
+  max-width: 15ch;
+  font-size: var(--step-film);
+  line-height: 0.95;
+}
 
 .film-on section h2 {
+  margin-bottom: 1rem;
   font-family: var(--sans);
   font-weight: 700;
   font-size: var(--step-0);
@@ -326,51 +347,62 @@ footer {
   text-transform: uppercase;
   color: var(--accent);
 }
-.film-on section .body { max-width: 56rem; }
-.film-on .body > .row {
-  padding-block: 1rem 0;
-  margin-top: 1rem;
-  border-top: 1px solid var(--rule);
+.film-on section .body { display: grid; max-width: none; }
+.film-on #scene-build .body > .row {
+  grid-area: 1 / 1;
+  padding: 0;
+  border: 0;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  align-content: start;
 }
-.film-on .body > .row:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .film-on h3 {
-  font-size: clamp(1.5rem, 0.8rem + 3.2vw, 3.25rem);
-  line-height: 1;
+  max-width: 14ch;
+  font-size: var(--step-film);
+  line-height: 0.95;
   letter-spacing: -0.03em;
   text-transform: uppercase;
+}
+.film-on .row ul { display: grid; gap: 0.25rem; }
+.film-on .row li {
+  color: var(--text-dim);
+  font-size: var(--step-1);
+  line-height: 1.3;
 }
 .film-on .empty {
   color: var(--text);
   font-weight: 700;
-  font-size: var(--step-hero);
-  line-height: 0.98;
+  font-size: var(--step-film);
+  line-height: 0.95;
   letter-spacing: -0.03em;
   text-transform: uppercase;
-  max-width: 11ch;
+  max-width: 10ch;
 }
+.film-on .plain { gap: 0.35rem; }
 .film-on .plain li {
   font-weight: 700;
-  font-size: clamp(1.25rem, 0.6rem + 3vw, 3rem);
-  line-height: 1.15;
+  font-size: clamp(1.3rem, 0.55rem + 3.4vw, 3.5rem);
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
-.film-on footer { position: relative; z-index: 1; }
+.film-on .plain a { text-decoration-thickness: 2px; text-underline-offset: 0.18em; }
 
 .rail {
   position: absolute;
-  z-index: 4;
+  z-index: 5;
   left: var(--gutter);
   bottom: clamp(1.5rem, 4vw, 3rem);
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 .rail button {
   all: unset;
   box-sizing: border-box;
   display: grid;
   gap: 0.5rem;
-  width: clamp(2.75rem, 8vw, 8.5rem);
+  width: clamp(1.75rem, 7vw, 7.5rem);
   min-width: 0;
+  padding-block: 0.75rem;
+  margin-block: -0.75rem;
   cursor: pointer;
   color: var(--text-dim);
   font-size: 0.75rem;
@@ -391,19 +423,10 @@ footer {
 }
 
 @media (min-width: 48rem) {
-  .rail button { width: clamp(5.25rem, 8vw, 8.5rem); }
+  .rail button { width: clamp(5.25rem, 8vw, 7.5rem); }
   .rail .lab { display: block; white-space: nowrap; }
-  .film-on .body > .rows,
-  .film-on #scene-build .body { display: grid; grid-template-columns: 1fr 1fr; column-gap: 3rem; max-width: none; }
-  .film-on #scene-build .body > .row { margin-top: 0; padding-top: 1rem; border-top: 1px solid var(--rule); }
-  .film-on #scene-build .body > .row:first-child { padding-top: 1rem; border-top: 1px solid var(--rule); }
-}
-@media (max-width: 47.99rem) {
-  .film-on .scene { padding-bottom: 7rem; }
-  .film-on .field { height: 36%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .field i { animation: none; }
   html { scroll-behavior: auto; }
 }
